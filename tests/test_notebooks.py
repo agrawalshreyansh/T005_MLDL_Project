@@ -36,3 +36,14 @@ def test_code_cells_parse_and_have_no_machine_specific_paths(path):
         except SyntaxError as exc:                    # pragma: no cover - message is the point
             pytest.fail(f"{path.name} cell {i}: {exc}")
         assert "/Users/" not in cell.source and "C:\\" not in cell.source, f"{path.name} cell {i} hard-codes a path"
+
+
+@pytest.mark.parametrize("path", NOTEBOOKS, ids=lambda p: p.name)
+def test_outputs_do_not_leak_absolute_local_paths(path):
+    nb = nbformat.read(path, as_version=4)
+    for i, cell in enumerate(nb.cells):
+        for out in cell.get("outputs", []):
+            text = "".join(out.get("text", "")) + "".join(
+                "".join(v) if isinstance(v, list) else str(v) for k, v in out.get("data", {}).items() if k.startswith("text"))
+            for marker in ("/Users/", "/home/", "/var/folders/", "C:\\Users"):
+                assert marker not in text, f"{path.name} cell {i} output contains a local path ({marker})"

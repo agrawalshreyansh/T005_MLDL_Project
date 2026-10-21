@@ -155,7 +155,12 @@ def evaluate_mae_mph(model: DCRNN, data: GraphData, origins: np.ndarray, device:
 
 def train_dcrnn(model: DCRNN, data: GraphData, train_origins: np.ndarray, val_origins: np.ndarray, device: torch.device,
                 params: dict, checkpoint_path: Path | None = None, log: Callable[[str], None] = print) -> dict:
-    """AdamW + masked MAE, validation early stopping, linear teacher-forcing decay (0.5 -> 0 over 60% of the epochs)."""
+    """AdamW + masked MAE, linear teacher-forcing decay (0.5 -> 0 over 60% of the epochs), validation early stopping.
+
+    The checkpoint is the epoch with the lowest (always free-running) validation MAE.  Patience and the LR-plateau
+    schedule only count epochs after teacher forcing has reached 0: while it is being phased out the validation error
+    is noisy, and a first run stopped early in that phase while the error was still falling.
+    """
     set_seed(params["seed"]); model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=params["lr"], weight_decay=params["weight_decay"])
     sched = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, factor=0.5, patience=max(params["patience"] // 3, 1))
@@ -175,7 +180,9 @@ def train_dcrnn(model: DCRNN, data: GraphData, train_origins: np.ndarray, val_or
                 raise FloatingPointError(f"non-finite loss at epoch {epoch}")
             loss.backward(); nn.utils.clip_grad_norm_(model.parameters(), params["grad_clip"]); opt.step()
             running += loss.item(); nb += 1
-        val = evaluate_mae_mph(model, data, val_origins, device); sched.step(val)
+        val = evaluate_mae_mph(model, data, val_origins, device)
+        if tf == 0.0:                       # plateau logic only once teacher forcing is off (earlier epochs are noisy)
+            sched.step(val)
         hist["epoch"].append(epoch); hist["train_loss_scaled"].append(running / max(nb, 1)); hist["val_mae_mph"].append(val)
         hist["lr"].append(opt.param_groups[0]["lr"]); hist["seconds"].append(time.time() - t0); hist["teacher_forcing"].append(tf)
         improved = val < best - 1e-4
@@ -185,7 +192,7 @@ def train_dcrnn(model: DCRNN, data: GraphData, train_origins: np.ndarray, val_or
             best_state = copy.deepcopy(model.state_dict())
             if checkpoint_path is not None:
                 save_checkpoint(checkpoint_path, model, {"epoch": epoch, "val_mae_mph": val, "params": {k: str(v) for k, v in params.items()}})
-        else:
+        elif tf == 0.0:                     # patience only counts epochs without teacher forcing
             bad += 1
             if bad >= params["patience"]:
                 log(f"early stopping at epoch {epoch} (best epoch {best_epoch})"); break

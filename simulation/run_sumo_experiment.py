@@ -2,15 +2,18 @@
 
 Nothing here touches real traffic infrastructure; it only drives a local SUMO simulation.
 
-STATUS: written for SUMO >= 1.18 + TraCI, but **not executed in the environment this project was developed in**
-(SUMO was not installed).  The pure-Python signal logic (``signal_policies.py``) is unit-tested; the SUMO glue
-code below (network conversion, TraCI loop, metrics) has not been run and may need small adjustments.
+Tested with SUMO 1.28 (pip packages ``eclipse-sumo`` and ``traci``).  Each episode checks that SUMO shows exactly the
+signal state the controller set, and that the intersection has one controlled link per approach.
 """
 from __future__ import annotations
 
+import contextlib
+import io
+import os
 import random
 import shutil
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -24,6 +27,26 @@ OUT = SIM_DIR / "output"
 APPROACHES = {"N": "N2C", "S": "S2C", "E": "E2C", "W": "W2C"}
 GROUP = {"N": sp.NS, "S": sp.NS, "E": sp.EW, "W": sp.EW}
 OPPOSITE = {"N": "S", "S": "N", "E": "W", "W": "E"}
+
+
+def sumo_binary(name: str) -> str | None:
+    """Locate a SUMO executable: PATH, then next to this Python (pip ``eclipse-sumo``), then ``$SUMO_HOME/bin``."""
+    candidates = [shutil.which(name), str(Path(sys.executable).parent / name)]
+    if os.environ.get("SUMO_HOME"):
+        candidates.append(str(Path(os.environ["SUMO_HOME"]) / "bin" / name))
+    try:
+        import sumo  # pip package eclipse-sumo
+        candidates.append(str(Path(sumo.SUMO_HOME) / "bin" / name))
+    except ImportError:
+        pass
+    return next((c for c in candidates if c and Path(c).is_file() and os.access(c, os.X_OK)), None)
+
+
+def _quiet_env() -> dict:
+    """Environment with a valid locale so SUMO tools do not print locale warnings."""
+    env = dict(os.environ)
+    env.setdefault("LC_ALL", "en_US.UTF-8"); env.setdefault("LANG", "en_US.UTF-8")
+    return env
 
 
 # --------------------------------------------------------------------------- #
@@ -55,11 +78,12 @@ def write_network_files(arm_length_m: float = 250.0, speed_mps: float = 13.89) -
 
 def convert_network() -> Path:
     """Run ``netconvert`` (requires SUMO on PATH)."""
-    if shutil.which("netconvert") is None:
+    netconvert = sumo_binary("netconvert")
+    if netconvert is None:
         raise RuntimeError("netconvert not found: install SUMO and set SUMO_HOME / PATH (see simulation/README.md)")
     net = CFG / "intersection.net.xml"
-    subprocess.run(["netconvert", "--node-files", str(CFG / "intersection.nod.xml"), "--edge-files", str(CFG / "intersection.edg.xml"),
-                    "--connection-files", str(CFG / "intersection.con.xml"), "-o", str(net)], check=True)
+    subprocess.run([netconvert, "--node-files", str(CFG / "intersection.nod.xml"), "--edge-files", str(CFG / "intersection.edg.xml"),
+                    "--connection-files", str(CFG / "intersection.con.xml"), "-o", str(net)], check=True, capture_output=True, env=_quiet_env())
     return net
 
 
@@ -108,20 +132,29 @@ def run_episode(policy_name: str, seed: int, duration_s: int = 3600) -> dict[str
     net = CFG / "intersection.net.xml"
     routes, _ = generate_routes(seed, duration_s)
     tripinfo = OUT / f"tripinfo_{policy_name}_seed{seed}.xml"
-    traci.start(["sumo", "-n", str(net), "-r", str(routes), "--seed", str(seed), "--no-step-log", "true",
-                 "--time-to-teleport", "-1", "--tripinfo-output", str(tripinfo), "--no-warnings", "true"])
+    os.environ.setdefault("LC_ALL", "en_US.UTF-8")            # SUMO warns about the locale when none is set
+    with contextlib.redirect_stdout(io.StringIO()):          # silence TraCI's "retrying to connect" chatter
+        traci.start([sumo_binary("sumo"), "-n", str(net), "-r", str(routes), "--seed", str(seed), "--no-step-log", "true",
+                     "--time-to-teleport", "-1", "--tripinfo-output", str(tripinfo), "--no-warnings", "true"],
+                    numRetries=120, stdout=subprocess.DEVNULL)
     try:
         policy = sp.FixedTimePolicy(30, 30) if policy_name == "fixed" else sp.QueueAwarePolicy(margin=2.0)
         controller = sp.SignalController(policy, sp.Timings())
         links = traci.trafficlight.getControlledLinks("TL")
         link_group = [GROUP[lk[0][0][0]] for lk in links]            # incoming lane id starts with the approach letter
+        if sorted(link_group) != sorted([sp.NS, sp.NS, sp.EW, sp.EW]):
+            raise RuntimeError(f"expected 4 controlled links (one per approach), got {links}")
         lanes = {g: [f"{a}2C_0" for a in APPROACHES if GROUP[a] == g] for g in (sp.NS, sp.EW)}
         queue_sum, max_queue = 0.0, 0.0
         for _ in range(duration_s):
             queues = {g: sum(traci.lane.getLastStepHaltingNumber(l) for l in lanes[g]) for g in lanes}
             colours = controller.step(queues)
-            traci.trafficlight.setRedYellowGreenState("TL", "".join(colours[g] for g in link_group))
+            state = "".join(colours[g] for g in link_group)
+            traci.trafficlight.setRedYellowGreenState("TL", state)
             traci.simulationStep()
+            shown = traci.trafficlight.getRedYellowGreenState("TL")
+            if shown != state:                                   # the controller, not SUMO's default program, drives the light
+                raise RuntimeError(f"signal state mismatch: set {state!r}, SUMO shows {shown!r}")
             total = sum(queues.values()); queue_sum += total; max_queue = max(max_queue, total)
     finally:
         traci.close()

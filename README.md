@@ -9,10 +9,10 @@ It asks whether using the road graph helps forecasting compared with models that
 
 ## State of the delivered run
 
-* **Executed in full mode:** notebooks 00-08 (and 06b, the optional DCRNN-style comparison) with real data; notebook 09 ran without SUMO and says so. 100 unit/structure tests pass (`python -m pytest tests -q`).
+* **Executed in full mode:** notebooks 00-09 including 06b (optional DCRNN-style comparison) and 09 (optional SUMO simulation, SUMO 1.28 installed with pip) with real data. All unit/structure tests pass (`python -m pytest tests -q`).
 * **Three training runs (seeds 42, 1, 2) of the ST-GAT and of its no-edge ablation** (notebook 06, `EXTRA_SEEDS = (1, 2)`). Notebook 07 reports the seed spread and per-seed paired comparisons; the main tables use seed 42. The bootstrap intervals cover test-day variation; the seed section covers training randomness (3 seeds is a small sample).
 * **Training happened in earlier executions;** the delivered notebooks 05, 06 and 06b default to `RETRAIN = False`, i.e. they reload the saved models and recompute everything downstream (set `RETRAIN = True` to retrain; expect ~15-20 min for XGBoost, ~45 min per ST-GAT variant, ~25 min for DCRNN on an Apple M3). Original training logs are printed on reload and kept in `artifacts/metrics/`.
-* **Not run / not claimed:** the SUMO simulation (SUMO not installed - no simulation results exist); the original DCRNN code (only a re-implementation with a reduced budget, best epoch = last epoch); anything beyond this city and these 119 days.
+* **Not run / not claimed:** the original DCRNN code (only a PyTorch re-implementation with a reduced training budget); any link between the METR-LA forecasts and the simulated signal controller (the simulation is a separate synthetic intersection); real traffic-signal control of any kind; anything beyond this city and these 119 days.
 * Interpretation text that depends on results is checked against the tables in the same notebook; a warning is printed if a claim does not hold in your run (see `reports/experiment_notes.md`).
 
 ## Research question
@@ -30,7 +30,7 @@ It asks whether using the road graph helps forecasting compared with models that
 | DCRNN-style diffusion-convolution seq2seq (optional, PyTorch re-implementation, *not* the original code) | notebook 06b, `src/dcrnn_model.py` | yes |
 | Evaluation: common valid mask, MAE / RMSE / MAPE, per horizon, peak vs off-peak, per sensor, bootstrap intervals | notebook 07, `src/evaluation.py`, `src/metrics.py` | - |
 | Geographic congestion maps (static + interactive) | notebook 08 | - |
-| SUMO fixed-time vs queue-aware signal control (optional; SUMO absent in the development environment, see below) | notebook 09, `simulation/` | - |
+| SUMO fixed-time vs queue-aware signal control on one synthetic intersection (optional, simulation only) | notebook 09, `simulation/` | - |
 
 ## Dataset
 
@@ -73,10 +73,10 @@ Run the notebooks in `notebooks/` in this order; each one reloads what it needs 
 | 04 | `04_baseline_models` | 02, 03 | ~1 min |
 | 05 | `05_xgboost_forecasting` | 02, 03 (04 for the validation comparison) | ~15-20 min (four models on ~2.3M rows each) |
 | 06 | `06_graph_attention_network` | 02, 03 | ~45 min per model (30 epochs x ~90 s on Apple MPS); ST-GAT + ablation = ~1.5 h; each extra seed adds ~1.5 h |
-| 06b | `06b_optional_dcrnn` (optional) | 02, 03 | ~25 min (12 epochs x ~2 min, run alone on the machine) |
+| 06b | `06b_optional_dcrnn` (optional) | 02, 03 | up to ~1 h (at most 30 epochs x ~2 min, run alone on the machine) |
 | 07 | `07_model_evaluation` | 04, 05, 06 (06b optional) | ~2 min |
 | 08 | `08_congestion_visualization` | 05, 06 | ~1 min |
-| 09 | `09_optional_sumo_simulation` (optional) | - | seconds without SUMO |
+| 09 | `09_optional_sumo_simulation` (optional) | - | ~1-2 min with SUMO (40 one-hour episodes); seconds without |
 
 \*Measured on an 8 GB Apple M3 laptop; they depend strongly on hardware.
 `notebooks/OneFileConsistofEverythingInCells.ipynb` is the same content in one file: all notebooks 00-09 (including 06b) concatenated in this order, **with the outputs of the executed runs**. It was assembled from the executed notebooks and was **not** re-executed as a single file; running it top to bottom works the same way (each section has its own setup cell) and, with the default `RETRAIN = False`, reloads the saved models.
@@ -144,8 +144,11 @@ The raw data checksums are in `data/README.md`.
 
 ## Optional SUMO extension
 
-`simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, a fixed-time and a queue-aware policy, and a TraCI runner. The pure-Python signal-safety logic is unit-tested.
-**SUMO was not installed in the development environment, so the simulation was not run and there are no simulation results.** METR-LA contains no intersection data, so its sensor graph is not a signal-control network. See `simulation/README.md`.
+`simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, a fixed-time and a queue-aware policy, and a TraCI runner; the signal-safety logic
+(min/max green, yellow, all-red, no conflicting greens) is enforced by a state machine and unit-tested, and every simulation step checks that SUMO shows exactly the
+controller's signal state. Install SUMO with `pip install eclipse-sumo traci` (no admin rights) and run notebook 09; it compares the policies over 20 seeds with paired
+statistics. This is a **simulation only**: METR-LA contains no intersection data, the simulated intersection is not part of the METR-LA network, the forecasts are not fed into the
+controller, and the fixed-time baseline was not tuned to the (asymmetric) demand. See `simulation/README.md`.
 
 ## Known limitations
 

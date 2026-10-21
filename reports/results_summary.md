@@ -7,7 +7,7 @@
 * Models scored on the test period: Persistence, Rolling mean (60 min), Seasonal average, XGBoost, ST-GAT without edges (ablation), ST-GAT, DCRNN (optional).
 * Models without prediction files (reported missing, nothing invented): none.
 * Training runs per neural model: 3 (seed-to-seed variability was measured, see below).
-* SUMO signal-control simulation: **not executed** (SUMO was not installed); there are no simulation results.
+* SUMO signal-control simulation: executed (see the simulation section below).
 * Test period: 2012-06-04 00:00:00 to 2012-06-27 23:55:00; 6,901 forecast origins x 207 sensors x 4 horizons; 5,026,522 valid points scored (targets observed for all models; 12.0% of target cells are missing and excluded).
 
 ## Test-period metrics by forecast horizon
@@ -22,7 +22,7 @@
 | XGBoost | 2.30 | 2.83 | 3.25 | 3.66 |
 | ST-GAT without edges (ablation) | 2.31 | 2.81 | 3.19 | 3.56 |
 | ST-GAT | 2.26 | 2.70 | 3.05 | 3.47 |
-| DCRNN (optional) | 2.27 | 2.74 | 3.12 | 3.58 |
+| DCRNN (optional) | 2.31 | 2.76 | 3.14 | 3.59 |
 
 **RMSE (mph)**
 
@@ -34,7 +34,7 @@
 | XGBoost | 4.04 | 5.54 | 6.57 | 7.44 |
 | ST-GAT without edges (ablation) | 4.06 | 5.51 | 6.53 | 7.49 |
 | ST-GAT | 3.91 | 5.13 | 6.07 | 7.14 |
-| DCRNN (optional) | 3.90 | 5.29 | 6.31 | 7.43 |
+| DCRNN (optional) | 3.96 | 5.26 | 6.30 | 7.39 |
 
 **MAPE (%)**
 
@@ -46,7 +46,7 @@
 | XGBoost | 5.63 | 7.59 | 9.47 | 11.40 |
 | ST-GAT without edges (ablation) | 5.68 | 7.59 | 9.23 | 10.76 |
 | ST-GAT | 5.43 | 7.03 | 8.47 | 10.18 |
-| DCRNN (optional) | 5.36 | 6.97 | 8.42 | 10.19 |
+| DCRNN (optional) | 5.46 | 7.09 | 8.65 | 10.50 |
 
 ## Does the graph help? Improvement of ST-GAT (positive = ST-GAT has the lower error)
 
@@ -129,10 +129,11 @@ Spearman correlation of the per-sensor improvement with sensor properties (descr
 4. **Sensors.** The ST-GAT has the lower error at a clear majority of sensors at every horizon, but not at all of them: a minority gets slightly worse, and the one sensor that is isolated in the road graph (no neighbours to use) shows no gain (slightly negative at the 30-minute horizon shown in the notebook). The per-sensor gain is positively correlated with the sensor's historical variability and, less strongly, with its graph degree; the two properties are themselves correlated, so these single correlations do not separate their effects.
 5. **What is *not* established.** The bootstrap intervals cover only day-to-day variation of the 24 test days; training randomness is covered only by the seed section (a small number of seeds, where they were trained). XGBoost was kept graph-agnostic by design: a tree model given neighbour features is a different baseline that we did not run, so "graph helps" here means *for these two model families*. The test period has much more missing data than the training period, and everything is 119 days of one city. Attention weights are not causal evidence.
 
-**Optional DCRNN-style comparison** (only present when notebook 06b was run; a PyTorch re-implementation with a reduced training budget: one third of the training windows, 12 epochs, best epoch = last epoch, i.e. still improving, so its numbers are not a converged result and say nothing about the original DCRNN).
+**Optional DCRNN-style comparison** (only present when notebook 06b was run; a PyTorch re-implementation, not the original DCRNN, trained on one third of the training windows with the same 30-epoch budget as the ST-GAT, one seed).
 
-* A second, architecturally different graph model also beats the independent-sensor XGBoost at every horizon, which supports the conclusion that using neighbouring sensors helps.
-* ST-GAT has the lower MAE at every horizon, but the two are close (within a few percent), and the DCRNN-style model is slightly ahead of the ST-GAT in MAPE at 5-30 minutes and in RMSE at 5 minutes: **the ST-GAT is not best on every metric.**
+* A second, architecturally different graph model beats the independent-sensor XGBoost at 15, 30 and 60 minutes and ties it at 5 minutes, which is consistent with the conclusion that neighbouring sensors help beyond the shortest horizon.
+* The ST-GAT is better than the DCRNN-style model on every metric (MAE, RMSE, MAPE) at every horizon in this run, but the gap is small (within a few percent of MAE).
+* An earlier, shorter DCRNN run (superseded because its early-stopping rule fired while teacher forcing was still being phased out) was slightly *ahead* of the ST-GAT in MAPE at 5-30 minutes. Differences of this size between the two graph models are therefore within the run-to-run variation of DCRNN, which we did not measure with several seeds: **we do not claim that one of the two graph models is better.**
 * At 60 minutes the DCRNN-style model is about on par with the no-edge network, i.e. it shows no gain from its graph there.
 
 ## Seed robustness (test MAE, mph)
@@ -169,6 +170,18 @@ ST-GAT improvement (%) per seed over the no-edge network trained with the **same
 * The ST-GAT's test MAE varies by only about a hundredth of a mph between seeds, far less than its gap to XGBoost or to the no-edge network.
 * **Every** seed beats XGBoost at every horizon and beats the no-edge network trained with the same seed at every horizon, so the graph effect reported above is not an accident of one initialisation.
 * Three seeds is still a small sample; it shows the effect is stable, not a precise estimate of its size.
+
+## Optional simulation: fixed-time vs queue-aware signal (SUMO, one synthetic intersection)
+
+Paired over seeds with identical demand (notebook 09); negative difference = queue-aware lower. Simulation only; the METR-LA forecasts are not used by the controller and the fixed-time plan was not tuned to the asymmetric demand.
+
+| metric | mean fixed | mean queue-aware | mean difference (queue-aware - fixed) | 95% CI low | 95% CI high | relative change % | seeds where queue-aware is lower |
+|---|---|---|---|---|---|---|---|
+| mean_waiting_time_s | 11.72 | 8.26 | -3.46 | -3.71 | -3.22 | -29.54 | 20 |
+| mean_travel_time_s | 58.04 | 55.95 | -2.09 | -2.46 | -1.72 | -3.60 | 20 |
+| mean_queue_vehicles | 4.54 | 3.20 | -1.34 | -1.43 | -1.24 | -29.48 | 20 |
+| max_queue_vehicles | 19.70 | 16.90 | -2.80 | -3.94 | -1.66 | -14.21 | 17 |
+| completed_trips | 1377.35 | 1376.40 | -0.95 | -2.68 | 0.78 | -0.07 | 10 |
 
 ## Caveats
 
