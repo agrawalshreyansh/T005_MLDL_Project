@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<connections>
+  <connection from="N2C" to="C2S" />
+  <connection from="S2C" to="C2N" />
+  <connection from="E2C" to="C2W" />
+  <connection from="W2C" to="C2E" />
+</connections>

@@ -1,0 +1,28 @@
+# Core numerical stack
+numpy>=2.0
+pandas>=2.2
+scipy>=1.13
+scikit-learn>=1.5
+h5py>=3.10            # reads metr-la.h5 without unpickling
+
+# Models
+torch>=2.4            # CPU / CUDA / Apple-MPS
+torch_geometric>=2.5  # only used to verify the dense GAT layer against GATConv (tests)
+xgboost>=2.1          # macOS: `brew install libomp` (OpenMP runtime) if import fails
+
+# Graph and visualisation
+networkx>=3.2
+matplotlib>=3.8
+seaborn>=0.13
+plotly>=5.22
+folium>=0.17
+
+# Notebook / test tooling
+jupyter
+ipykernel
+nbformat
+nbclient
+nbconvert
+pytest
+tqdm
+pyyaml

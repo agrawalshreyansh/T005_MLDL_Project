@@ -1,0 +1,27 @@
+# environments
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# data (large / redistributable only from the original sources)
+data/raw/*.h5
+data/raw/sensor_graph/*.csv
+data/raw/sensor_graph/*.txt
+data/raw/sensor_graph/*.pkl
+data/processed/*.npz
+data/processed/*.npy
+
+# generated artifacts (reproduced by the notebooks)
+artifacts/models/*
+artifacts/predictions/*
+artifacts/figures/*
+artifacts/metrics/*
+!artifacts/*/.gitkeep
+
+# SUMO outputs
+simulation/output/
+*.tripinfo.xml
+*.queue.xml

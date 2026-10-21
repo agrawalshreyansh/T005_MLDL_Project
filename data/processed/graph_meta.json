@@ -1,0 +1,19 @@
+{
+  "source": "DCRNN thresholded Gaussian kernel on directed road distances (distances_la_2012.csv)",
+  "normalized_k": 0.1,
+  "sigma_m": 2584.4501953125,
+  "n_edges_directed": 1515,
+  "n_self_loops": 207,
+  "directed": true,
+  "reciprocal_fraction": 0.26666666666666666,
+  "isolated_nodes": [
+    26
+  ],
+  "n_weak_components": 2,
+  "n_strong_components": 13,
+  "distance_units": "metres",
+  "adjacency_convention": "A[i, j] > 0 means edge i -> j",
+  "sensor_ids_source": "column order of metr-la.h5",
+  "sensor_order_hash": "2a38ef551082d02d",
+  "n_nodes": 207
+}
