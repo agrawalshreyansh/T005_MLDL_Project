@@ -186,3 +186,28 @@ def test_time_features_are_cyclic_and_bounded(toy_series):
     np.testing.assert_allclose(f[0, :2], [0.0, 1.0], atol=1e-6)            # midnight
     np.testing.assert_allclose(f[0, :2], f[288, :2], atol=1e-6)            # same time of day, next day
     assert not np.allclose(f[0, 2:], f[288, 2:])                           # but a different weekday
+
+
+def test_neighbour_features_aggregate_the_right_sensors_without_future_leakage():
+    from src.feature_engineering import build_neighbour_features
+    t, n = 30, 4
+    speed = np.tile(np.array([10.0, 20.0, 40.0, 60.0], dtype=np.float32), (t, 1))
+    speed[:, 0] += np.arange(t)                            # sensor 0 changes over time
+    adj = np.eye(n, dtype=np.float32)
+    adj[0, 1] = 1.0; adj[2, 1] = 0.5                        # edges 0 -> 1 (weight 1) and 2 -> 1 (weight 0.5); 3 isolated
+    origins = np.array([10, 20])
+    feats, names = build_neighbour_features(speed, adj, origins)
+    f = feats.reshape(len(origins), n, -1)
+    up_mean, up_min, up_n = names.index("up_mean_lag0"), names.index("up_min_lag0"), names.index("up_n_observed")
+    # sensor 1 at origin 10: upstream = {0 (speed 20, w 1), 2 (speed 40, w .5)} -> weighted mean 26.67, min 20
+    assert f[0, 1, up_mean] == pytest.approx((20 * 1 + 40 * 0.5) / 1.5)
+    assert f[0, 1, up_min] == 20 and f[0, 1, up_n] == 2
+    assert f[0, 0, names.index("down_mean_lag0")] == pytest.approx(20.0)      # sensor 0's downstream neighbour is 1
+    assert f[0, 1, names.index("up_mean_lag3")] == pytest.approx((17 * 1 + 40 * 0.5) / 1.5)  # 15 min earlier
+    assert np.isnan(f[0, 3, up_mean]) and f[0, 3, up_n] == 0                  # isolated sensor: no neighbours
+    future = speed.copy(); future[21:] = 999.0                                # nothing after the last origin may matter
+    f2, _ = build_neighbour_features(future, adj, origins)
+    np.testing.assert_array_equal(np.nan_to_num(feats, nan=-1), np.nan_to_num(f2, nan=-1))
+    miss = speed.copy(); miss[10, 2] = np.nan                                # a missing neighbour is ignored, not zero
+    f3, _ = build_neighbour_features(miss, adj, origins)
+    assert f3.reshape(2, n, -1)[0, 1, up_mean] == pytest.approx(20.0) and f3.reshape(2, n, -1)[0, 1, up_n] == 1

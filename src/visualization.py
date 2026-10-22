@@ -42,9 +42,10 @@ MODEL_STYLE: dict[str, dict] = {
     "rolling_mean": dict(label="Rolling mean (60 min)", color="#c98500", marker="v", ls="--"),
     "seasonal_avg": dict(label="Seasonal average",      color="#d55181", marker="^", ls="--"),
     "xgboost":      dict(label="XGBoost",               color="#2a78d6", marker="o", ls="-"),
+    "xgboost_spatial": dict(label="XGBoost + neighbour features", color="#6250d6", marker="X", ls="-."),
     "gat_nograph":  dict(label="ST-GAT without edges (ablation)", color="#1baf7a", marker="D", ls="-"),
     "gat":          dict(label="ST-GAT",                color="#eb6834", marker="o", ls="-"),
-    "dcrnn":        dict(label="DCRNN (optional)",      color="#6250d6", marker="P", ls="-"),
+    "dcrnn":        dict(label="DCRNN (optional)",      color="#e34948", marker="P", ls="-"),
 }
 HORIZON_LABEL = {h: f"{h * config.STEP_MINUTES} min" for h in range(1, 13)}
 

@@ -44,23 +44,23 @@ def predict_speed(model: xgb.XGBRegressor, x: pd.DataFrame) -> np.ndarray:
     return (x["last_observed"].to_numpy(dtype=np.float32) + model.predict(x)).astype(np.float32)
 
 
-def model_path(horizon: int) -> Path:
-    return config.MODELS_DIR / f"{config.tagged('xgb')}_h{horizon}.json"
+def model_path(horizon: int, prefix: str = "xgb") -> Path:
+    return config.MODELS_DIR / f"{config.tagged(prefix)}_h{horizon}.json"
 
 
-def save_models(models: dict[int, xgb.XGBRegressor], extra: dict) -> None:
+def save_models(models: dict[int, xgb.XGBRegressor], extra: dict, prefix: str = "xgb") -> None:
     """Save each horizon as native XGBoost JSON (no pickle) plus a hyper-parameter record."""
     config.MODELS_DIR.mkdir(parents=True, exist_ok=True)
     record = {"params": {k: str(v) for k, v in config.XGB_PARAMS.items()}, "horizons": {}}
     for h, m in models.items():
-        m.save_model(model_path(h))
+        m.save_model(model_path(h, prefix))
         record["horizons"][str(h)] = {"best_iteration": int(m.best_iteration), "n_features": int(m.n_features_in_)}
     record.update(extra)
-    (config.MODELS_DIR / f"{config.tagged('xgb')}_hyperparameters.json").write_text(json.dumps(record, indent=2))
+    (config.MODELS_DIR / f"{config.tagged(prefix)}_hyperparameters.json").write_text(json.dumps(record, indent=2))
 
 
-def load_model(horizon: int) -> xgb.XGBRegressor:
-    path = model_path(horizon)
+def load_model(horizon: int, prefix: str = "xgb") -> xgb.XGBRegressor:
+    path = model_path(horizon, prefix)
     if not path.is_file():
         raise FileNotFoundError(f"{path} not found - run notebook 05_xgboost_forecasting first.")
     model = xgb.XGBRegressor()

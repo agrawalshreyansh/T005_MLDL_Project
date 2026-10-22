@@ -76,3 +76,22 @@ def test_safety_checker_detects_a_conflict():
     bad = [{sp.NS: "G", sp.EW: "G"}]
     with pytest.raises(AssertionError):
         sp.check_trace_is_safe(bad)
+
+
+def test_webster_greens_follow_demand_and_respect_limits():
+    t = sp.Timings(min_green=10, max_green=60, yellow=3, all_red=2)
+    g_ns, g_ew, cycle = sp.webster_greens(500, 200, t)
+    assert g_ns > g_ew >= t.min_green and g_ns <= t.max_green and 30 <= cycle <= 120
+    assert sp.webster_greens(200, 500, t)[:2] == (g_ew, g_ns)                 # symmetric
+    with pytest.raises(ValueError):
+        sp.webster_greens(1000, 800, t)                                      # above capacity
+
+
+def test_scheduled_fixed_time_switches_plan_by_clock_and_stays_safe():
+    timings = sp.Timings(min_green=10, max_green=60, yellow=3, all_red=2)
+    policy = sp.ScheduledFixedTimePolicy([(300, 40, 10), (600, 10, 40)])
+    trace = sp.run_trace(policy, lambda t: {sp.NS: 0, sp.EW: 0}, 600, timings)
+    sp.check_trace_is_safe(trace, timings)
+    first = [len(r) for r in _runs([s[sp.NS] for s in trace[:300]]) if r[0] == "G"]
+    late = [len(r) for r in _runs([s[sp.NS] for s in trace[320:]]) if r[0] == "G"]
+    assert max(first) == 40 and max(late[:-1] or late) == 10                 # NS green shrinks when the plan changes

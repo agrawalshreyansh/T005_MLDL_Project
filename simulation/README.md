@@ -23,9 +23,9 @@ and only illustrates the *idea* that a forecast of demand/congestion could infor
 * 4-way intersection, one lane per approach, 250 m arms, 50 km/h, straight-through movements only (so phases cannot conflict inside a phase).
 * Two-phase signal: north-south / east-west.
 * Demand 3,600 s, seeded Poisson arrivals: first half 500 veh/h per N/S approach and 200 veh/h per E/W approach; second half reversed.
-* Policies: fixed-time 30 s / 30 s versus queue-aware (min green 10 s, max green 60 s, yellow 3 s, all-red 2 s for both).
+* Policies: naive fixed-time 30 s / 30 s; fixed-time time-of-day plan tuned with Webster's method from the demand profile (saturation flow assumed 1,800 veh/h/lane); queue-aware rule. Same safety limits for all (min green 10 s, max green 60 s, yellow 3 s, all-red 2 s).
 * Metrics: mean waiting time, mean travel time, mean and maximum queue (halting vehicles on the incoming lanes), completed trips; 20 seeds, paired by seed.
-* Caveat: the fixed-time plan (30 s / 30 s) is not tuned to the asymmetric demand, so the measured improvement is an upper bound for this scenario.
+* Result (20 seeds, paired): the queue-aware rule beats the naive plan but has higher waiting time, travel time and queues than the Webster-tuned plan on every seed: a well-designed fixed plan beats this simple adaptive rule at below-capacity demand.
 
 ## Requirements
 
@@ -40,7 +40,7 @@ or install SUMO from <https://sumo.dlr.de/docs/Installing/index.html>. Then run 
 
 ## Implementation plan if you extend this
 
-1. Tune the fixed-time plan to the demand (e.g. Webster's method per half hour) for a fairer baseline.
+1. Implement a proper actuated controller (gap-out on detector headways, tuned extension times) and compare it with the Webster plan.
 2. Vary the demand level towards and beyond capacity to see where the policies differ in throughput.
 3. Optionally feed a demand forecast into `QueueAwarePolicy.forecast` (e.g. expected arrivals per approach from a short-term predictor).
 4. For a realistic study, import a real intersection (OpenStreetMap + `netconvert`) and calibrate demand from counts.

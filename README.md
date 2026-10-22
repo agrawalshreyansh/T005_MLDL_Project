@@ -9,9 +9,9 @@ It asks whether using the road graph helps forecasting compared with models that
 
 ## State of the delivered run
 
-* **Executed in full mode:** notebooks 00-09 including 06b (optional DCRNN-style comparison) and 09 (optional SUMO simulation, SUMO 1.28 installed with pip) with real data. All unit/structure tests pass (`python -m pytest tests -q`).
-* **Three training runs (seeds 42, 1, 2) of the ST-GAT and of its no-edge ablation** (notebook 06, `EXTRA_SEEDS = (1, 2)`). Notebook 07 reports the seed spread and per-seed paired comparisons; the main tables use seed 42. The bootstrap intervals cover test-day variation; the seed section covers training randomness (3 seeds is a small sample).
-* **Training happened in earlier executions;** the delivered notebooks 05, 06 and 06b default to `RETRAIN = False`, i.e. they reload the saved models and recompute everything downstream (set `RETRAIN = True` to retrain; expect ~15-20 min for XGBoost, ~45 min per ST-GAT variant, ~25 min for DCRNN on an Apple M3). Original training logs are printed on reload and kept in `artifacts/metrics/`.
+* **Executed in full mode:** notebooks 00-09 including 05b (XGBoost with neighbour features), 06b (optional DCRNN-style comparison) and 09 (optional SUMO simulation, SUMO 1.28 installed with pip) with real data. All unit/structure tests pass (`python -m pytest tests -q`).
+* **Three training runs (seeds 42, 1, 2) of the ST-GAT, its no-edge ablation and the DCRNN-style model** (`EXTRA_SEEDS = (1, 2)` in notebooks 06 and 06b). Notebook 07 reports the seed spread and per-seed paired comparisons; the main tables use seed 42. The bootstrap intervals cover test-day variation; the seed section covers training randomness (3 seeds is a small sample).
+* **Training happened in earlier executions;** the delivered notebooks 05, 05b, 06 and 06b default to `RETRAIN = False`, i.e. they reload the saved models and recompute everything downstream (set `RETRAIN = True` to retrain; expect ~15-20 min per XGBoost notebook, ~45 min per ST-GAT variant and seed, up to ~1 h per DCRNN seed on an Apple M3). Original training logs are printed on reload and kept in `artifacts/metrics/`.
 * **Not run / not claimed:** the original DCRNN code (only a PyTorch re-implementation with a reduced training budget); any link between the METR-LA forecasts and the simulated signal controller (the simulation is a separate synthetic intersection); real traffic-signal control of any kind; anything beyond this city and these 119 days.
 * Interpretation text that depends on results is checked against the tables in the same notebook; a warning is printed if a claim does not hold in your run (see `reports/experiment_notes.md`).
 
@@ -24,13 +24,14 @@ It asks whether using the road graph helps forecasting compared with models that
 | Component | Where | Uses the graph? |
 |---|---|---|
 | Persistence, 60-min rolling mean, seasonal (weekday x time-of-day) average | notebook 04, `src/baselines.py` | no |
+| XGBoost + road-graph neighbour features (upstream/downstream neighbour speeds): the spatial tree baseline | notebook 05b, `src/feature_engineering.py` | yes (as features) |
 | XGBoost: one global model per horizon, per-sensor lag / rolling / calendar features, residual target | notebook 05, `src/xgboost_model.py`, `src/feature_engineering.py` | no |
 | **ST-GAT**: GRU temporal encoder + 2 graph-attention blocks (attention restricted to road-graph neighbours) + multi-horizon head | notebook 06, `src/gat_model.py` | **yes** |
 | **ST-GAT without edges** (identical network and parameter count, every edge removed): the cleanest test of the graph itself | notebook 06 | no |
 | DCRNN-style diffusion-convolution seq2seq (optional, PyTorch re-implementation, *not* the original code) | notebook 06b, `src/dcrnn_model.py` | yes |
 | Evaluation: common valid mask, MAE / RMSE / MAPE, per horizon, peak vs off-peak, per sensor, bootstrap intervals | notebook 07, `src/evaluation.py`, `src/metrics.py` | - |
 | Geographic congestion maps (static + interactive) | notebook 08 | - |
-| SUMO fixed-time vs queue-aware signal control on one synthetic intersection (optional, simulation only) | notebook 09, `simulation/` | - |
+| SUMO: queue-aware vs naive and Webster-tuned fixed-time signal control on one synthetic intersection (optional, simulation only) | notebook 09, `simulation/` | - |
 
 ## Dataset
 
@@ -72,11 +73,12 @@ Run the notebooks in `notebooks/` in this order; each one reloads what it needs 
 | 03 | `03_graph_construction` | 02 | seconds |
 | 04 | `04_baseline_models` | 02, 03 | ~1 min |
 | 05 | `05_xgboost_forecasting` | 02, 03 (04 for the validation comparison) | ~15-20 min (four models on ~2.3M rows each) |
+| 05b | `05b_xgboost_spatial` | 02, 03, 05, 06 (validation comparison) | ~20 min |
 | 06 | `06_graph_attention_network` | 02, 03 | ~45 min per model (30 epochs x ~90 s on Apple MPS); ST-GAT + ablation = ~1.5 h; each extra seed adds ~1.5 h |
 | 06b | `06b_optional_dcrnn` (optional) | 02, 03 | up to ~1 h (at most 30 epochs x ~2 min, run alone on the machine) |
 | 07 | `07_model_evaluation` | 04, 05, 06 (06b optional) | ~2 min |
 | 08 | `08_congestion_visualization` | 05, 06 | ~1 min |
-| 09 | `09_optional_sumo_simulation` (optional) | - | ~1-2 min with SUMO (40 one-hour episodes); seconds without |
+| 09 | `09_optional_sumo_simulation` (optional) | - | ~2-3 min with SUMO (60 one-hour episodes); seconds without |
 
 \*Measured on an 8 GB Apple M3 laptop; they depend strongly on hardware.
 `notebooks/OneFileConsistofEverythingInCells.ipynb` is the same content in one file: all notebooks 00-09 (including 06b) concatenated in this order, **with the outputs of the executed runs**. It was assembled from the executed notebooks and was **not** re-executed as a single file; running it top to bottom works the same way (each section has its own setup cell) and, with the default `RETRAIN = False`, reloads the saved models.
@@ -88,7 +90,7 @@ Run headless from the project root, for example:
 ```bash
 cd notebooks
 for nb in 00_environment_and_setup 01_data_exploration 02_data_preprocessing 03_graph_construction 04_baseline_models \
-          05_xgboost_forecasting 06_graph_attention_network 07_model_evaluation 08_congestion_visualization 09_optional_sumo_simulation; do
+          05_xgboost_forecasting 06_graph_attention_network 05b_xgboost_spatial 06b_optional_dcrnn 07_model_evaluation 08_congestion_visualization 09_optional_sumo_simulation; do
   jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 $nb.ipynb
 done
 ```
@@ -144,16 +146,17 @@ The raw data checksums are in `data/README.md`.
 
 ## Optional SUMO extension
 
-`simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, a fixed-time and a queue-aware policy, and a TraCI runner; the signal-safety logic
-(min/max green, yellow, all-red, no conflicting greens) is enforced by a state machine and unit-tested, and every simulation step checks that SUMO shows exactly the
-controller's signal state. Install SUMO with `pip install eclipse-sumo traci` (no admin rights) and run notebook 09; it compares the policies over 20 seeds with paired
-statistics. This is a **simulation only**: METR-LA contains no intersection data, the simulated intersection is not part of the METR-LA network, the forecasts are not fed into the
-controller, and the fixed-time baseline was not tuned to the (asymmetric) demand. See `simulation/README.md`.
+`simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, three policies (naive 30 s / 30 s fixed-time, a time-of-day fixed-time plan tuned with
+Webster's method from the known demand, and a simple queue-aware rule) and a TraCI runner. The signal-safety logic (min/max green, yellow, all-red, no conflicting greens)
+is enforced by a state machine and unit-tested, and every simulation step checks that SUMO shows exactly the controller's signal state. Install SUMO with
+`pip install eclipse-sumo traci` (no admin rights) and run notebook 09 (20 seeds, paired statistics). The queue-aware rule beats the naive plan but **loses to the tuned
+fixed-time plan on every seed**. This is a **simulation only**: METR-LA contains no intersection data, the simulated intersection is not part of the METR-LA network,
+and the forecasts are not fed into the controller. See `simulation/README.md`.
 
 ## Known limitations
 
 * One city, 119 days, speeds only; conclusions may not transfer.
-* Only three seeds per neural model (the ST-GAT and its ablation) and one for the optional DCRNN-style model; the bootstrap covers test-day variation, the seed section training randomness.
+* Only three seeds per neural model; XGBoost models are deterministic and fitted once. The bootstrap covers test-day variation, the seed section training randomness.
 * The test period has much more missing data than the training period.
 * XGBoost treats sensors independently by design (no neighbour features), so XGBoost vs ST-GAT mixes the effect of the graph with the effect of a different model family; the no-edge ablation isolates the graph.
 * The dense masked attention layer is verified against PyTorch Geometric's `GATConv` numerically, but PyG is not used for training.
@@ -167,7 +170,7 @@ README.md  requirements.txt  .gitignore
 notebooks/   00 ... 09 (+ 06b) and the combined OneFileConsistofEverythingInCells.ipynb
 src/         config, data_loader, preprocessing, graph_utils, feature_engineering, baselines, xgboost_model,
              gat_model, dcrnn_model, metrics, evaluation, visualization
-tests/       data alignment, graph, metrics, splits / leakage, notebooks structure, GAT, DCRNN, signal policies
+tests/       data alignment, graph, metrics, splits / leakage (incl. neighbour features), notebooks structure + path leaks, GAT, DCRNN, signal policies (incl. Webster)
 tools/       merge_notebooks.py (builds the one-file notebook from the executed ones)
 data/        raw/ (not committed), processed/, README.md
 artifacts/   models/ predictions/ figures/ metrics/

@@ -8,7 +8,7 @@ import nbformat as nbf
 
 NB_DIR = Path(__file__).resolve().parents[1] / "notebooks"
 ORDER = ["00_environment_and_setup", "01_data_exploration", "02_data_preprocessing", "03_graph_construction", "04_baseline_models",
-         "05_xgboost_forecasting", "06_graph_attention_network", "06b_optional_dcrnn", "07_model_evaluation",
+         "05_xgboost_forecasting", "05b_xgboost_spatial", "06_graph_attention_network", "06b_optional_dcrnn", "07_model_evaluation",
          "08_congestion_visualization", "09_optional_sumo_simulation"]
 
 merged = nbf.v4.new_notebook()

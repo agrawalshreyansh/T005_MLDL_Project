@@ -50,6 +50,55 @@ class FixedTimePolicy:
         return elapsed >= self.green[green]
 
 
+class ScheduledFixedTimePolicy:
+    """Pre-timed plan whose green times change by time of day: ``schedule = [(end_s, green_ns, green_ew), ...]``.
+
+    The controller tells the policy the simulation time through :meth:`on_step`.  This is how fixed-time plans are
+    used in practice (different plans for different periods, designed from historical counts).
+    """
+
+    def __init__(self, schedule: list[tuple[int, int, int]]) -> None:
+        if not schedule or any(g <= 0 for _, a, b in schedule for g in (a, b)):
+            raise ValueError("schedule needs positive green times")
+        self.schedule = sorted(schedule)
+        self.clock = 0
+
+    def on_step(self, clock: int) -> None:
+        self.clock = clock
+
+    def current(self) -> tuple[int, int]:
+        for end, g_ns, g_ew in self.schedule:
+            if self.clock < end:
+                return g_ns, g_ew
+        return self.schedule[-1][1], self.schedule[-1][2]
+
+    def should_switch(self, green: str, elapsed: int, queues: Mapping[str, float]) -> bool:
+        g_ns, g_ew = self.current()
+        return elapsed >= (g_ns if green == NS else g_ew)
+
+
+def webster_greens(flow_ns: float, flow_ew: float, timings: "Timings" = None, saturation_flow: float = 1800.0,
+                   cycle_bounds: tuple[float, float] = (30.0, 120.0)) -> tuple[int, int, float]:
+    """Webster's optimal cycle and green split for a two-phase signal.
+
+    ``flow_*`` is the critical (largest) approach flow of each phase in veh/h, ``saturation_flow`` in veh/h/lane.
+    Cycle ``C0 = (1.5 L + 5) / (1 - Y)`` with lost time ``L`` = (yellow + all-red) per phase and ``Y`` the sum of
+    flow ratios ``y = q / s``; effective green ``C0 - L`` is split in proportion to ``y`` and each green is clipped
+    to the controller's min/max green.  Returns ``(green_ns, green_ew, cycle)``.
+    """
+    timings = timings or Timings()
+    y_ns, y_ew = flow_ns / saturation_flow, flow_ew / saturation_flow
+    big_y = y_ns + y_ew
+    if big_y >= 0.95:
+        raise ValueError(f"demand too close to capacity for Webster's formula (Y = {big_y:.2f})")
+    lost = 2 * (timings.yellow + timings.all_red)
+    cycle = min(max((1.5 * lost + 5) / (1 - big_y), cycle_bounds[0]), cycle_bounds[1])
+    effective = cycle - lost
+    g_ns = int(round(min(max(effective * y_ns / big_y, timings.min_green), timings.max_green)))
+    g_ew = int(round(min(max(effective * y_ew / big_y, timings.min_green), timings.max_green)))
+    return g_ns, g_ew, float(cycle)
+
+
 class QueueAwarePolicy:
     """Serve the longer queue: leave a green when the waiting approach is clearly more loaded.
 
@@ -77,9 +126,13 @@ class SignalController:
     def __init__(self, policy: Policy, timings: Timings = Timings(), start: str = NS) -> None:
         self.policy, self.t = policy, timings
         self.phase, self.stage, self.elapsed = start, "green", 0      # stage in {"green", "yellow", "all_red"}
+        self.clock = 0                                                # simulation seconds since the start
 
     def step(self, queues: Mapping[str, float]) -> dict[str, str]:
         """Show the current state for one second, then advance; returns the colours shown ('G', 'y', 'r')."""
+        if hasattr(self.policy, "on_step"):
+            self.policy.on_step(self.clock)
+        self.clock += 1
         shown = self.colours()
         self.elapsed += 1                                   # seconds this stage has now been displayed
         if self.stage == "green":

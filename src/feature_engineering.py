@@ -102,3 +102,56 @@ def to_frame(
     sid = sensor_index_column(len(base) // n_sensors, n_sensors)
     frame["sensor_id"] = pd.Categorical(sid, categories=np.arange(n_sensors))
     return frame
+
+
+# --------------------------------------------------------------------------- #
+# Optional spatial features (for the "XGBoost + neighbours" baseline)
+# --------------------------------------------------------------------------- #
+def padded_neighbours(adj: np.ndarray, direction: str) -> tuple[np.ndarray, np.ndarray]:
+    """Neighbour index ``[N, K]`` and edge weight ``[N, K]`` (0 = padding) for each sensor.
+
+    ``direction="up"``: sensors j with an edge j -> i (upstream); ``"down"``: edges i -> j.  Self-loops excluded.
+    """
+    if direction not in ("up", "down"):
+        raise ValueError("direction must be 'up' or 'down'")
+    a = np.asarray(adj, dtype=np.float32).copy()
+    np.fill_diagonal(a, 0.0)
+    w = a.T if direction == "up" else a                        # w[i, j] = weight of neighbour j for sensor i
+    k = max(int((w > 0).sum(1).max()), 1)
+    idx = np.zeros((w.shape[0], k), dtype=np.int64)
+    wt = np.zeros((w.shape[0], k), dtype=np.float32)
+    for i in range(w.shape[0]):
+        js = np.flatnonzero(w[i] > 0)
+        idx[i, :len(js)], wt[i, :len(js)] = js, w[i, js]
+    return idx, wt
+
+
+def build_neighbour_features(
+    speed: np.ndarray, adj: np.ndarray, origins: np.ndarray,
+) -> tuple[np.ndarray, list[str]]:
+    """Road-graph neighbour features ``[S * N, F]`` (rows origin-major, like :func:`build_base_features`).
+
+    Per direction (upstream / downstream neighbours): edge-weighted mean of the neighbours' speed at the origin
+    and 3 steps (15 min) earlier, the slowest neighbour at the origin, and the number of neighbours observed at the
+    origin.  Only readings at or before the origin are used; missing neighbours are ignored (NaN if none observed).
+    """
+    origins = np.asarray(origins, dtype=np.int64)
+    s_len, n = len(origins), speed.shape[1]
+    cols, names = [], []
+    for direction in ("up", "down"):
+        idx, wt = padded_neighbours(adj, direction)
+        for lag in (0, 3):
+            v = speed[origins - lag][:, idx]                     # [S, N, K]
+            ok = np.isfinite(v) & (wt[None] > 0)
+            num = (np.where(ok, v, 0.0) * wt[None]).sum(-1)
+            den = (ok * wt[None]).sum(-1)
+            with np.errstate(invalid="ignore", divide="ignore"):
+                cols.append(np.where(den > 0, num / den, np.nan).astype(np.float32))
+            names.append(f"{direction}_mean_lag{lag}")
+            if lag == 0:
+                cols.append(np.where(ok.any(-1), np.where(ok, v, np.inf).min(-1), np.nan).astype(np.float32))
+                names.append(f"{direction}_min_lag0")
+                cols.append(ok.sum(-1).astype(np.float32))
+                names.append(f"{direction}_n_observed")
+    stacked = np.stack(cols, axis=-1)                            # [S, N, F]
+    return stacked.reshape(s_len * n, len(names)), names

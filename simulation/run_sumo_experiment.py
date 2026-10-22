@@ -124,6 +124,31 @@ def generate_routes(seed: int, duration_s: int = 3600, path: Path | None = None)
 
 
 # --------------------------------------------------------------------------- #
+# Policies
+# --------------------------------------------------------------------------- #
+POLICIES = ("fixed", "fixed_webster", "queue_aware")
+
+
+def webster_schedule(duration_s: int = 3600, timings: sp.Timings = sp.Timings()) -> list[tuple[int, int, int]]:
+    """Time-of-day plan from the demand profile (as an engineer would from historical counts)."""
+    plan = []
+    for start, end, rates in demand_profile(duration_s):
+        g_ns, g_ew, _ = sp.webster_greens(max(rates["N"], rates["S"]), max(rates["E"], rates["W"]), timings)
+        plan.append((end, g_ns, g_ew))
+    return plan
+
+
+def make_policy(name: str, duration_s: int = 3600):
+    if name == "fixed":
+        return sp.FixedTimePolicy(30, 30)
+    if name == "fixed_webster":
+        return sp.ScheduledFixedTimePolicy(webster_schedule(duration_s))
+    if name == "queue_aware":
+        return sp.QueueAwarePolicy(margin=2.0)
+    raise ValueError(f"unknown policy {name!r}; choose from {POLICIES}")
+
+
+# --------------------------------------------------------------------------- #
 # One TraCI episode (NOT executed during development: SUMO was unavailable)
 # --------------------------------------------------------------------------- #
 def run_episode(policy_name: str, seed: int, duration_s: int = 3600) -> dict[str, float]:
@@ -138,7 +163,7 @@ def run_episode(policy_name: str, seed: int, duration_s: int = 3600) -> dict[str
                      "--time-to-teleport", "-1", "--tripinfo-output", str(tripinfo), "--no-warnings", "true"],
                     numRetries=120, stdout=subprocess.DEVNULL)
     try:
-        policy = sp.FixedTimePolicy(30, 30) if policy_name == "fixed" else sp.QueueAwarePolicy(margin=2.0)
+        policy = make_policy(policy_name, duration_s)
         controller = sp.SignalController(policy, sp.Timings())
         links = traci.trafficlight.getControlledLinks("TL")
         link_group = [GROUP[lk[0][0][0]] for lk in links]            # incoming lane id starts with the approach letter
