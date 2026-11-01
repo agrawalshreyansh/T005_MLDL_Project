@@ -22,6 +22,6 @@ artifacts/metrics/*
 !artifacts/*/.gitkeep
 
 # SUMO outputs
-simulation/output/
+phase2/simulation/output/
 *.tripinfo.xml
 *.queue.xml

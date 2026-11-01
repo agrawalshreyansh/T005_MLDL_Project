@@ -26,6 +26,10 @@ It asks whether using the road graph helps forecasting compared with models that
 | Persistence, 60-min rolling mean, seasonal (weekday x time-of-day) average | notebook 04, `src/baselines.py` | no |
 | XGBoost + road-graph neighbour features (upstream/downstream neighbour speeds): the spatial tree baseline | notebook 05b, `src/feature_engineering.py` | yes (as features) |
 | XGBoost: one global model per horizon, per-sensor lag / rolling / calendar features, residual target | notebook 05, `src/xgboost_model.py`, `src/feature_engineering.py` | no |
+| Multi-output Random Forest (one forest, four horizons; settings chosen on validation) | notebook 05c, `src/rf_model.py`, `src/tabular.py` | no |
+| XGBoost hyper-parameter study: random search + rolling-origin cross-validation, pre-registered adoption rule | notebook 05d, `src/tuning.py` | no |
+| Feature-group ablation with a seed-noise estimate | notebook 05e | partly (last stage adds neighbours) |
+| Phase 1 evaluation of all machine-learning models on the test period (MAE / RMSE / MAPE by horizon, peak vs off-peak, bootstrap intervals) | notebook 07a, `reports/phase1_results_summary.md` | - |
 | **ST-GAT**: GRU temporal encoder + 2 graph-attention blocks (attention restricted to road-graph neighbours) + multi-horizon head | notebook 06, `src/gat_model.py` | **yes** |
 | **ST-GAT without edges** (identical network and parameter count, every edge removed): the cleanest test of the graph itself | notebook 06 | no |
 | DCRNN-style diffusion-convolution seq2seq (optional, PyTorch re-implementation, *not* the original code) | notebook 06b, `src/dcrnn_model.py` | yes |
@@ -65,7 +69,8 @@ pip install -r requirements.txt
 
 Run the notebooks in this order; each one reloads what it needs from `data/processed/` and `artifacts/`, so every notebook is restart-safe.
 Notebooks 00-05b, 07 live in `notebooks/` (the Phase 1, ML-focused part); the deep-learning and simulation notebooks 06, 06b, 08 and 09 live in `phase2/notebooks/`.
-Notebook 07 and the validation comparison in 05b read the saved outputs of 06, so run 06 first if you want the full comparison.
+**Phase 1 (machine learning only) needs neither PyTorch nor SUMO:** run 00-05e and 07a, then `python -m pytest tests -q --ignore=tests/test_gat_model.py --ignore=tests/test_dcrnn_model.py`.
+Notebook 07 (all models, including the graph networks) reads the saved outputs of 06 and 06b, so it needs Phase 2 to have been run.
 
 | # | Notebook | Needs | Typical time* |
 |---|---|---|---|
@@ -74,8 +79,12 @@ Notebook 07 and the validation comparison in 05b read the saved outputs of 06, s
 | 02 | `02_data_preprocessing` | raw data | ~1 min |
 | 03 | `03_graph_construction` | 02 | seconds |
 | 04 | `04_baseline_models` | 02, 03 | ~1 min |
-| 05 | `05_xgboost_forecasting` | 02, 03 (04 for the validation comparison) | ~15-20 min (four models on ~2.3M rows each) |
-| 05b | `05b_xgboost_spatial` | 02, 03, 05, 06 (validation comparison) | ~20 min |
+| 05 | `05_xgboost_forecasting` | 02, 03 (04 for the validation comparison) | ~11 min (four models on ~2.3M rows each) |
+| 05b | `05b_xgboost_spatial` | 02, 03, 05 (06 is used for the validation comparison only if its predictions exist) | ~18 min |
+| 05c | `05c_random_forest` | 02, 03, 05 (validation comparison) | ~16 min (6-setting sensitivity study ~8 min, final fit ~3 min) |
+| 05d | `05d_xgboost_tuning` | 02, 03, 05 | ~20 min (search ~8 min, cross-validation ~4 min, refit of the adopted configuration ~7 min) |
+| 05e | `05e_feature_ablation` | 02, 03 | ~8 min |
+| 07a | `07a_phase1_ml_evaluation` | 04, 05, 05b, 05c, 05d | ~10 s |
 | 06 | `06_graph_attention_network` | 02, 03 | ~45 min per model (30 epochs x ~90 s on Apple MPS); ST-GAT + ablation = ~1.5 h; each extra seed adds ~1.5 h |
 | 06b | `06b_optional_dcrnn` (optional) | 02, 03 | up to ~1 h (at most 30 epochs x ~2 min, run alone on the machine) |
 | 07 | `07_model_evaluation` | 04, 05, 06 (06b optional) | ~2 min |
