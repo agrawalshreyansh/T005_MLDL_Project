@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\caption{MAE improvement (\%) of the first model over the second, with 95\% day-block bootstrap interval. Positive means the first model is better; an interval that excludes zero is a consistent difference over the 24 test days.}
+\label{tab:improve}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Comparison & 5 min & 15 min & 30 min & 60 min \\
+\midrule
+XGBoost vs.\ persistence & 18.2 [17.7, 18.8] & 19.0 [18.4, 19.7] & 22.5 [21.4, 23.5] & 31.5 [29.3, 33.3] \\
+Random forest vs.\ XGBoost & -4.5 [-4.9, -4.2] & -7.0 [-7.6, -6.6] & -9.2 [-10.1, -8.5] & -13.1 [-14.5, -11.8] \\
+XGB + neighbours vs.\ XGBoost & 3.6 [3.3, 4.0] & 2.9 [2.7, 3.2] & 2.6 [2.2, 2.9] & 1.8 [1.4, 2.2] \\
+XGB + neighbours vs.\ random forest & 7.8 [7.5, 8.0] & 9.3 [9.0, 9.7] & 10.8 [10.3, 11.4] & 13.2 [12.3, 14.1] \\
+Tuned vs.\ default XGBoost & 0.1 [0.1, 0.1] & 0.3 [0.3, 0.4] & 0.5 [0.4, 0.6] & 1.3 [1.0, 1.5] \\
+\bottomrule
+\end{tabular}
+\end{table*}

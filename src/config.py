@@ -172,6 +172,29 @@ XGB_PARAMS: dict[str, Any] = dict(
 XGB_TRAIN_STRIDE: int = _pick(2, 12)
 XGB_VAL_STRIDE: int = _pick(3, 12)
 
+# Multi-output Random Forest baseline (notebook 05c): one forest predicts the four horizons jointly.
+# Every tree sees ``max_samples`` of the training rows, which keeps the fit inside a laptop's RAM and time budget.
+RF_PARAMS: dict[str, Any] = dict(
+    n_estimators=_pick(150, 10),
+    max_features=0.4,
+    min_samples_leaf=20,
+    max_samples=_pick(0.1, 0.5),
+    criterion="squared_error",          # the criterion that supports missing feature values in scikit-learn
+    n_jobs=-1,
+    random_state=SEED,
+)
+RF_TRAIN_STRIDE: int = XGB_TRAIN_STRIDE
+
+# XGBoost hyper-parameter study (notebook 05d): random search on a thinned training set at one horizon, then
+# rolling-origin cross-validation inside the training period for the best candidates.
+TUNE_HORIZON: int = 6                      # 30 minutes: the middle of the four horizons
+TUNE_TRAIN_THIN: int = _pick(3, 1)         # extra thinning of the already strided training origins
+TUNE_N_CONFIGS: int = _pick(12, 3)
+TUNE_TOP_K: int = _pick(3, 1)
+TUNE_CV_FOLDS: int = 3
+TUNE_MAX_ROUNDS: int = _pick(600, 30)
+TUNE_EARLY_STOPPING: int = _pick(30, 5)
+
 GAT_PARAMS: dict[str, Any] = dict(
     d_model=64,
     n_heads=4,

@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\caption{Test MAE (mph) in weekday peak hours (07--10, 15--19, by forecast target time) and all other hours.}
+\label{tab:peak}
+\small
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+Period & Model & 5 min & 15 min & 30 min & 60 min \\
+\midrule
+\multirow{5}{*}{peak} & Persistence & 3.31 & 4.59 & 5.82 & 7.74 \\
+ & XGBoost & 2.92 & 3.98 & 4.83 & 5.67 \\
+ & Random forest (multi-output) & 3.05 & 4.25 & 5.25 & 6.42 \\
+ & XGBoost + neighbours & 2.74 & 3.79 & 4.63 & 5.50 \\
+ & XGBoost (tuned) & 2.92 & 3.96 & 4.79 & 5.55 \\
+\midrule
+\multirow{5}{*}{off-peak} & Persistence & 2.66 & 3.16 & 3.69 & 4.62 \\
+ & XGBoost & 2.11 & 2.48 & 2.76 & 3.05 \\
+ & Random forest (multi-output) & 2.21 & 2.65 & 3.03 & 3.45 \\
+ & XGBoost + neighbours & 2.06 & 2.42 & 2.72 & 3.02 \\
+ & XGBoost (tuned) & 2.11 & 2.47 & 2.75 & 3.02 \\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\caption{Cumulative feature-group ablation (validation MAE in mph; gain relative to the previous stage in \%). Persistence on the same rows is the reference.}
+\label{tab:ablation}
+\small
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+ & \multicolumn{2}{c}{15 min} & \multicolumn{2}{c}{60 min} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}
+Stage & MAE & gain & MAE & gain \\
+\midrule
+1 lags + last value & 2.819 & 12.7 & 4.382 & 9.3 \\
+2 + rolling stats, trend & 2.818 & 0.0 & 4.381 & 0.0 \\
+3 + calendar (target time) & 2.746 & 2.5 & 3.984 & 9.1 \\
+4 + sensor identity & 2.676 & 2.6 & 3.575 & 10.3 \\
+5 + road-graph neighbours & 2.604 & 2.7 & 3.514 & 1.7 \\
+\bottomrule
+\end{tabular}
+\end{table*}

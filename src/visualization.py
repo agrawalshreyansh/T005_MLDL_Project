@@ -43,6 +43,8 @@ MODEL_STYLE: dict[str, dict] = {
     "seasonal_avg": dict(label="Seasonal average",      color="#d55181", marker="^", ls="--"),
     "xgboost":      dict(label="XGBoost",               color="#2a78d6", marker="o", ls="-"),
     "xgboost_spatial": dict(label="XGBoost + neighbour features", color="#6250d6", marker="X", ls="-."),
+    "random_forest": dict(label="Random Forest (multi-output)", color="#7a8f1f", marker="h", ls="-"),
+    "xgboost_tuned": dict(label="XGBoost (tuned)",      color="#0b4f9c", marker="*", ls="-"),
     "gat_nograph":  dict(label="ST-GAT without edges (ablation)", color="#1baf7a", marker="D", ls="-"),
     "gat":          dict(label="ST-GAT",                color="#eb6834", marker="o", ls="-"),
     "dcrnn":        dict(label="DCRNN (optional)",      color="#e34948", marker="P", ls="-"),

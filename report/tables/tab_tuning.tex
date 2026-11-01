@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Hyper-parameter study at 30 minutes. Rolling-origin cross-validation inside the training period for the default and the best random-search candidates (MAE of the residual, mph).}
+\label{tab:tuning}
+\small
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Config. & depth & min.\ child & $\eta$ & CV MAE & vs.\ default (\%) \\
+\midrule
+cfg11 & 10 & 50 & 0.08 & 3.2350 & +0.54 \\
+cfg05 & 10 & 50 & 0.08 & 3.2355 & +0.52 \\
+cfg12 & 10 & 20 & 0.05 & 3.2405 & +0.37 \\
+default & 8 & 20 & 0.08 & 3.2525 & +0.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
