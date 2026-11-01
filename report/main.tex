@@ -101,7 +101,7 @@ r_{t+h,n}=v_{t+h,n}-a_{t,n},\qquad \hat v_{t+h,n}=a_{t,n}+\hat r_{t+h,n},
 so every model is judged on what it adds beyond persistence, and the trees only need to learn the change of speed rather than the level.
 
 \subsection{Gradient boosting (XGBoost)}
-Boosting builds an additive model $F_M(x)=\sum_{m=1}^{M}\eta f_m(x)$ of regression trees with shrinkage $\eta$, each tree fitted to reduce the loss left by its predecessors~\cite{friedman2001gbm}. XGBoost minimises a regularised objective $\sum_i \ell(y_i,\hat y_i)+\sum_m\Omega(f_m)$ with $\Omega(f)=\gamma T+\tfrac12\lambda\lVert w\rVert^2$ for a tree with $T$ leaves and leaf weights $w$. A second-order expansion gives, for a leaf whose samples have gradient sum $G$ and Hessian sum $H$, the optimal weight $w^\*=-G/(H+\lambda)$, and the gain of a split into left and right parts
+Boosting builds an additive model $F_M(x)=\sum_{m=1}^{M}\eta f_m(x)$ of regression trees with shrinkage $\eta$, each tree fitted to reduce the loss left by its predecessors~\cite{friedman2001gbm}. XGBoost minimises a regularised objective $\sum_i \ell(y_i,\hat y_i)+\sum_m\Omega(f_m)$ with $\Omega(f)=\gamma T+\tfrac12\lambda\lVert w\rVert^2$ for a tree with $T$ leaves and leaf weights $w$. A second-order expansion gives, for a leaf whose samples have gradient sum $G$ and Hessian sum $H$, the optimal weight $w^{*}=-G/(H+\lambda)$, and the gain of a split into left and right parts
 \begin{equation}
 \tfrac12\Big[\tfrac{G_L^2}{H_L+\lambda}+\tfrac{G_R^2}{H_R+\lambda}-\tfrac{(G_L+G_R)^2}{H_L+H_R+\lambda}\Big]-\gamma .
 \end{equation}
