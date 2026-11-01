@@ -80,7 +80,7 @@ def convert_network() -> Path:
     """Run ``netconvert`` (requires SUMO on PATH)."""
     netconvert = sumo_binary("netconvert")
     if netconvert is None:
-        raise RuntimeError("netconvert not found: install SUMO and set SUMO_HOME / PATH (see simulation/README.md)")
+        raise RuntimeError("netconvert not found: install SUMO and set SUMO_HOME / PATH (see phase2/simulation/README.md)")
     net = CFG / "intersection.net.xml"
     subprocess.run([netconvert, "--node-files", str(CFG / "intersection.nod.xml"), "--edge-files", str(CFG / "intersection.edg.xml"),
                     "--connection-files", str(CFG / "intersection.con.xml"), "-o", str(net)], check=True, capture_output=True, env=_quiet_env())

@@ -63,7 +63,9 @@ pip install -r requirements.txt
 
 ## Execution order
 
-Run the notebooks in `notebooks/` in this order; each one reloads what it needs from `data/processed/` and `artifacts/`, so every notebook is restart-safe.
+Run the notebooks in this order; each one reloads what it needs from `data/processed/` and `artifacts/`, so every notebook is restart-safe.
+Notebooks 00-05b, 07 live in `notebooks/` (the Phase 1, ML-focused part); the deep-learning and simulation notebooks 06, 06b, 08 and 09 live in `phase2/notebooks/`.
+Notebook 07 and the validation comparison in 05b read the saved outputs of 06, so run 06 first if you want the full comparison.
 
 | # | Notebook | Needs | Typical time* |
 |---|---|---|---|
@@ -81,16 +83,13 @@ Run the notebooks in `notebooks/` in this order; each one reloads what it needs 
 | 09 | `09_optional_sumo_simulation` (optional) | - | ~2-3 min with SUMO (60 one-hour episodes); seconds without |
 
 \*Measured on an 8 GB Apple M3 laptop; they depend strongly on hardware.
-`notebooks/OneFileConsistofEverythingInCells.ipynb` is the same content in one file: all notebooks 00-09 (including 06b) concatenated in this order, **with the outputs of the executed runs**. It was assembled from the executed notebooks and was **not** re-executed as a single file; running it top to bottom works the same way (each section has its own setup cell) and, with the default `RETRAIN = False`, reloads the saved models.
-
-To regenerate the one-file notebook after editing/re-executing any notebook: `python tools/merge_notebooks.py` (it only concatenates the executed notebooks; nothing is re-run).
-
 Run headless from the project root, for example:
 
 ```bash
-cd notebooks
-for nb in 00_environment_and_setup 01_data_exploration 02_data_preprocessing 03_graph_construction 04_baseline_models \
-          05_xgboost_forecasting 06_graph_attention_network 05b_xgboost_spatial 06b_optional_dcrnn 07_model_evaluation 08_congestion_visualization 09_optional_sumo_simulation; do
+for nb in notebooks/00_environment_and_setup notebooks/01_data_exploration notebooks/02_data_preprocessing \
+          notebooks/03_graph_construction notebooks/04_baseline_models notebooks/05_xgboost_forecasting \
+          phase2/notebooks/06_graph_attention_network notebooks/05b_xgboost_spatial phase2/notebooks/06b_optional_dcrnn \
+          notebooks/07_model_evaluation phase2/notebooks/08_congestion_visualization phase2/notebooks/09_optional_sumo_simulation; do
   jupyter nbconvert --to notebook --execute --inplace --ExecutePreprocessor.timeout=-1 $nb.ipynb
 done
 ```
@@ -146,12 +145,12 @@ The raw data checksums are in `data/README.md`.
 
 ## Optional SUMO extension
 
-`simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, three policies (naive 30 s / 30 s fixed-time, a time-of-day fixed-time plan tuned with
+`phase2/simulation/` contains a synthetic 4-way intersection, seeded Poisson demand, three policies (naive 30 s / 30 s fixed-time, a time-of-day fixed-time plan tuned with
 Webster's method from the known demand, and a simple queue-aware rule) and a TraCI runner. The signal-safety logic (min/max green, yellow, all-red, no conflicting greens)
 is enforced by a state machine and unit-tested, and every simulation step checks that SUMO shows exactly the controller's signal state. Install SUMO with
 `pip install eclipse-sumo traci` (no admin rights) and run notebook 09 (20 seeds, paired statistics). The queue-aware rule beats the naive plan but **loses to the tuned
 fixed-time plan on every seed**. This is a **simulation only**: METR-LA contains no intersection data, the simulated intersection is not part of the METR-LA network,
-and the forecasts are not fed into the controller. See `simulation/README.md`.
+and the forecasts are not fed into the controller. See `phase2/simulation/README.md`.
 
 ## Known limitations
 
@@ -167,13 +166,12 @@ and the forecasts are not fed into the controller. See `simulation/README.md`.
 
 ```
 README.md  requirements.txt  .gitignore
-notebooks/   00 ... 09 (+ 06b) and the combined OneFileConsistofEverythingInCells.ipynb
+notebooks/   00 ... 05b and 07 (Phase 1: EDA, preprocessing, graph, baselines, XGBoost, evaluation)
+phase2/      notebooks/ (06, 06b, 08, 09: GAT, DCRNN, congestion maps, SUMO) and simulation/
 src/         config, data_loader, preprocessing, graph_utils, feature_engineering, baselines, xgboost_model,
              gat_model, dcrnn_model, metrics, evaluation, visualization
 tests/       data alignment, graph, metrics, splits / leakage (incl. neighbour features), notebooks structure + path leaks, GAT, DCRNN, signal policies (incl. Webster)
-tools/       merge_notebooks.py (builds the one-file notebook from the executed ones)
 data/        raw/ (not committed), processed/, README.md
 artifacts/   models/ predictions/ figures/ metrics/
 reports/     results_summary.md, experiment_notes.md
-simulation/  signal_policies.py, run_sumo_experiment.py, sumo_config/, README.md
 ```
