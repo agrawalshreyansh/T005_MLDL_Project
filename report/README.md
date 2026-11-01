@@ -6,7 +6,6 @@
 | `tables/*.tex` | Result tables, **generated** from `artifacts/metrics/*.csv` by `python report/make_tables.py`. Do not edit by hand; re-run the script after re-running the notebooks. |
 | `figures/*.png` | Figures copied from `artifacts/figures/` (the originals are produced by notebooks 01, 02, 05c, 05e and 07a). |
 | `slides/phase1_presentation.pptx` | 14-slide presentation with speaker notes. |
-| `viva_prep.md` | Likely viva questions with short answers grounded in this repository. |
 
 ## Compiling the report
 
