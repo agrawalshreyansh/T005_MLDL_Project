@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "simulation"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "phase2" / "simulation"))
 import signal_policies as sp  # noqa: E402
 
 
