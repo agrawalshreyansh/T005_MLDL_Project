@@ -72,7 +72,7 @@ def is_peak(timestamps: pd.DatetimeIndex) -> np.ndarray:
     for start, end in config.PEAK_WINDOWS:
         flag |= (hour >= start) & (hour < end)
     if config.PEAK_WEEKDAYS_ONLY:
-        flag &= np.asarray(timestamps.dayofweek) < 5
+        flag &= np.asarray(timestamps.day_of_week) < 5
     return flag
 
 

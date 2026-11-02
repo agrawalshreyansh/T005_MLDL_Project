@@ -149,7 +149,7 @@ class SpeedScaler:
 def calendar_arrays(timestamps: pd.DatetimeIndex) -> dict[str, np.ndarray]:
     """Minute-of-day, day-of-week (Mon=0) and cyclical encodings for every timestamp."""
     minute = (timestamps.hour * 60 + timestamps.minute).to_numpy().astype(np.float32)
-    dow = timestamps.dayofweek.to_numpy().astype(np.float32)
+    dow = timestamps.day_of_week.to_numpy().astype(np.float32)
     return {
         "minute_of_day": minute,
         "slot": (minute // config.STEP_MINUTES).astype(np.int32),

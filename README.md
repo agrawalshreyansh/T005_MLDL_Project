@@ -56,7 +56,7 @@ The test period contains noticeably more missing data than the training period.
 Python 3.10+ (developed on 3.13.6, Apple M3, 8 GB RAM).
 
 ```bash
-cd traffic-flow-control
+cd T005_MLDL_Project
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
@@ -175,10 +175,10 @@ and the forecasts are not fed into the controller. See `phase2/simulation/README
 
 ```
 README.md  requirements.txt  .gitignore
-notebooks/   00 ... 05b and 07 (Phase 1: EDA, preprocessing, graph, baselines, XGBoost, evaluation)
+notebooks/   00 ... 05e, 07 and 07a (Phase 1: EDA, preprocessing, graph, baselines, XGBoost, random forest, tuning, ablation, evaluation)
 phase2/      notebooks/ (06, 06b, 08, 09: GAT, DCRNN, congestion maps, SUMO) and simulation/
 src/         config, data_loader, preprocessing, graph_utils, feature_engineering, baselines, xgboost_model,
-             gat_model, dcrnn_model, metrics, evaluation, visualization
+             rf_model, tabular, tuning, gat_model, dcrnn_model, metrics, evaluation, visualization
 tests/       data alignment, graph, metrics, splits / leakage (incl. neighbour features), notebooks structure + path leaks, GAT, DCRNN, signal policies (incl. Webster)
 data/        raw/ (not committed), processed/, README.md
 artifacts/   models/ predictions/ figures/ metrics/

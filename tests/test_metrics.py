@@ -161,3 +161,24 @@ def test_report_claims_warns_but_does_not_raise_unless_strict(capsys, monkeypatc
         ev.report_claims({"b": False})
     monkeypatch.setattr(config, "IS_SMOKE", True)
     ev.report_claims({"b": False})                       # smoke runs are not judged
+
+
+def test_improvement_pct_handles_nonfinite_reference():
+    assert np.isnan(M.improvement_pct(float("nan"), 1.0))
+    assert np.isnan(M.improvement_pct(float("inf"), 1.0))
+    assert M.improvement_pct(5.0, 5.0) == pytest.approx(0.0)
+
+
+def test_pooled_from_groups_with_no_valid_points_is_nan():
+    out = M.pooled_from_groups({"a": {"MAE": 1.0, "RMSE": 1.0, "n_valid": 0}})
+    assert out["n_valid"] == 0 and np.isnan(out["MAE"]) and np.isnan(out["RMSE"])
+
+
+def test_compute_metrics_respects_custom_mape_threshold():
+    true = np.array([0.5, 2.0, 10.0]); pred = np.array([1.0, 2.0, 11.0])
+    default = M.compute_metrics(pred, true)
+    strict = M.compute_metrics(pred, true, mape_min_speed=5.0)
+    assert default["n_valid"] == strict["n_valid"] == 3
+    assert default["n_valid_mape"] == 2        # 0.5 mph is below the 1 mph default
+    assert strict["n_valid_mape"] == 1         # only the 10 mph point survives
+    assert strict["MAPE"] == pytest.approx(10.0)
