@@ -1,6 +1,6 @@
-# Traffic Flow Prediction and Signal Control via Graph Attention Networks and Flow Models
+# Traffic Flow Prediction and Signal Control via Graph Attention Networks and Flow Models 
 
-A notebook-first, reproducible study of multi-step traffic-speed forecasting on **METR-LA** (207 Los Angeles highway sensors, 5-minute data, March - June 2012).
+A notebook-first, reproducible study of multi-step traffic-speed forecasting on **METR-LA** (207 Los Angeles highway sensors, 5-minute data, March 2012 - June 2012).
 It asks whether using the road graph helps forecasting compared with models that treat every sensor independently, and it ships an *optional, simulation-only* signal-control extension.
 
 > **No result numbers are written in this README.** All metrics are produced by the executed notebooks, saved as CSV files in `artifacts/metrics/` and summarised in
