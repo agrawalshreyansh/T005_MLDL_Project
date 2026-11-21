@@ -23,6 +23,7 @@ artifacts/metrics/*
 # deep-learning training curves are small and feed the dashboard
 !artifacts/metrics/dl_*_history.csv
 !artifacts/metrics/dl_*_summary.json
+!artifacts/metrics/dl_st_gat_attention.npz
 artifacts/metrics/*_smoke_*
 
 # SUMO outputs
