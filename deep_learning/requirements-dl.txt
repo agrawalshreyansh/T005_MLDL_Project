@@ -2,6 +2,6 @@
 torch>=2.4             # CUDA (Kaggle) / Apple MPS / CPU
 torch_geometric>=2.5   # GATConv; pure-Python install, no compiled extensions needed
 kaggle>=1.7            # optional: push training runs to Kaggle GPUs
-streamlit>=1.40        # dashboard
+streamlit>=1.50        # dashboard
 pydeck>=0.9            # dashboard map
 plotly>=5.22           # dashboard charts
