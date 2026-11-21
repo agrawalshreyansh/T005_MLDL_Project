@@ -1,0 +1,16 @@
+\begin{table}[t]
+\centering
+\caption{Model size and training on one NVIDIA T4 (Kaggle). Epoch time and best epoch averaged over seeds; validation MAE is the mean over 12 steps.}
+\label{tab:models}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Model & Params & s/epoch & Best epoch & Val.\ MAE \\
+\midrule
+GRU (time only) & 158k & 34 & 34 & 2.977 \\
+ST-GAT, no edges & 328k & 42 & 21 & 2.961 \\
+ST-GAT & 328k & 56 & 22 & 2.806 \\
+DCRNN & 380k & 159 & 19 & 2.799 \\
+\bottomrule
+\end{tabular}
+\end{table}

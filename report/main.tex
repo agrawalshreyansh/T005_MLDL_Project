@@ -1,0 +1,231 @@
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{cite}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit}
+\graphicspath{{figures/}}
+
+\begin{document}
+
+\title{Does the Road Graph Help?\\Graph Neural Networks for Traffic Speed Forecasting on METR-LA}
+
+\author{\IEEEauthorblockN{Team T005}
+\IEEEauthorblockA{\small
+\begin{tabular}{@{}lll@{}}
+Harshit Shakya & 2401010183 & B.Tech CS\&AI\\
+Ishan Maheshwari & 2401010194 & B.Tech CS\&AI\\
+Shreyansh Agrawal & 2401010447 & B.Tech CS\&AI\\
+Divyanshu Raj & 2401010160 & B.Tech CS\&AI\\
+Nikith Gowda B S & 2401010299 & B.Tech CS\&AI
+\end{tabular}}}
+
+\maketitle
+
+\begin{abstract}
+Traffic congestion travels along roads, so a sensor's future speed depends on what is already happening upstream and downstream of it. We test whether graph neural networks that exploit the directed road graph forecast speed better than models that treat each road segment independently. On METR-LA (207 Los Angeles freeway sensors, 5-minute speeds, 119 days) we compare persistence, a seasonal average and two XGBoost models from Phase~1 with four deep networks trained under one protocol: a time-only GRU, a spatio-temporal graph attention network (ST-GAT), the same ST-GAT with every edge removed, and a diffusion convolutional recurrent network (DCRNN). All models use a 60-minute history, a day-aligned chronological split, scaling fitted on training data only, masked sensor outages and one common scoring mask, with uncertainty from three seeds and a day-block bootstrap. On 24 held-out days, ST-GAT lowers the 60-minute mean absolute error to 3.46~mph, 5.3\% below XGBoost with neighbour features (95\% CI 4.3--6.2\%) and 8.6\% below it in rush hour. Removing the edges from the otherwise identical network costs 3--5\% at every horizon, about ten times the seed spread, while a time-only GRU merely ties XGBoost. The gain therefore comes from the graph, not from the neural network itself.
+\end{abstract}
+
+\begin{IEEEkeywords}
+traffic forecasting, graph neural networks, graph attention, diffusion convolution, METR-LA, ablation, spatio-temporal data
+\end{IEEEkeywords}
+
+%==================================================================================================
+\section{Introduction}
+Short-term forecasts of traffic speed feed route guidance, incident response and signal planning. They are hard to make for one reason: congestion is not local. A queue that forms at one detector grows backwards, sensor by sensor, so a model that sees only a segment's own history learns of a jam after it arrives.
+
+Phase~1 of this project built the strongest conventional baselines we could defend on METR-LA. XGBoost on each sensor's own lags, rolling statistics and calendar features beat persistence by 31\% at 60 minutes, and giving it its road-graph neighbours' speeds as extra columns helped again. That result fixed the bar for this phase, and it raised the question we answer here:
+
+\textit{Does a model that learns how information moves along the directed road graph forecast better than models that see each segment on its own, and is any gain really due to the graph?}
+
+\textbf{Contributions.}
+(i)~A single training and scoring protocol for four deep networks and four baselines, with identical inputs, windows, masks and test points.
+(ii)~A ladder of models that adds one idea at a time: time only (GRU), learned attention over the graph (ST-GAT), and diffusion over the graph (DCRNN).
+(iii)~A controlled ablation: the ST-GAT with every edge removed has the same code, parameters and training, so any difference is due to the edges.
+(iv)~Evaluation by horizon, peak versus off-peak, per sensor, over three seeds and with day-block bootstrap intervals, plus an interpretation of attention and an explicit list of what the evidence does not show.
+
+%==================================================================================================
+\section{Related Work}
+\textbf{Classical and tree-based forecasting.} Surveys of short-term traffic forecasting~\cite{vlahogianni2014} cover univariate models such as seasonal ARIMA~\cite{williams2003}, which treat each detector separately. Gradient-boosted trees~\cite{friedman2001gbm,chen2016xgboost} and random forests~\cite{breiman2001rf} are strong baselines when features are engineered from lagged measurements; Phase~1 used them, including a variant fed with neighbour speeds.
+
+\textbf{Recurrent and sequence models.} Gated recurrent units (GRU)~\cite{cho2014gru} and LSTM encoder--decoders~\cite{sutskever2014} model temporal dependence in each series; deep autoencoders were an early neural approach to traffic flow~\cite{lv2015}. On their own they ignore the network.
+
+\textbf{Graph neural networks for traffic.} Graph convolution~\cite{kipf2017gcn} and graph attention~\cite{velickovic2018gat} pass information along graph edges. DCRNN~\cite{li2018dcrnn}, which introduced METR-LA as a benchmark, models traffic as a random-walk diffusion on a directed graph inside a recurrent encoder--decoder. STGCN~\cite{yu2018stgcn} combines spectral graph and temporal convolutions; Graph WaveNet~\cite{wu2019graphwavenet} learns an adaptive adjacency and uses dilated convolutions; GMAN~\cite{zheng2020gman} stacks spatial and temporal attention. Published comparisons often use weak or untuned independent baselines and rarely isolate the contribution of the graph itself. We build on GAT and DCRNN because the brief asks for a fixed adjacency and because both handle directed edges, and we add the edge ablation those papers lack.
+
+\textbf{Evaluation.} Chronological validation is required for non-stationary series~\cite{cerqueira2020}; strongly autocorrelated errors call for block resampling~\cite{kunsch1989}; percentage errors are unstable near zero~\cite{hyndman2006}.
+
+%==================================================================================================
+\section{Data}
+\textbf{METR-LA}~\cite{li2018dcrnn} holds 5-minute average speeds (mph) from 207 loop detectors on Los Angeles freeways, 1~March to 27~June 2012: 34{,}272 time steps. Only speed is recorded.
+
+\textbf{Outages.} 8.1\% of readings are exactly 0~mph, and in 2{,}148 steps all 207 sensors read 0 at once, which cannot be real traffic. A zero is therefore treated as missing: it is flagged in the input and never used as a target. Missingness is not stationary: 12.0\% of test cells are missing against 7.2\% in training.
+
+\textbf{Road graph.} Following DCRNN, the weighted adjacency is a thresholded Gaussian kernel of directed road-network distance, $A_{ij}=\exp(-d_{ij}^2/\sigma^2)$ with $\sigma=2{,}584$~m and entries below 0.1 set to zero. This gives 1{,}515 directed edges plus self-loops; only 27\% of edges have a reverse edge, so the graph is kept directed and is never symmetrised.
+
+%==================================================================================================
+\section{Problem Formulation}
+Let $x_t\in\mathbb{R}^{N}$ be the speeds of the $N=207$ sensors at step $t$ and $m_t\in\{0,1\}^N$ the observation mask. Given the last $L=12$ steps (60 minutes) of speeds, masks and calendar features, predict $x_{t+h}$ for $h=1,\dots,12$; we report $h\in\{1,3,6,12\}$ (5, 15, 30, 60~min). Every model sees the same 12-step history.
+
+\textbf{Inputs.} Each sensor and step carries six features: the speed z-scored with training statistics, the observed flag, and $\sin$/$\cos$ encodings of time of day and day of week. A batch is a tensor of shape $[B,12,N,6]$.
+
+\textbf{Residual target.} Let $a_t$ be the last observed speed in the window (the persistence forecast). Every learned model outputs a change $\hat r_{t+h}$ and predicts $\hat x_{t+h}=a_t+\hat r_{t+h}$, so a zero output is already a sensible forecast and the models are compared on what they add beyond persistence.
+
+\textbf{Loss.} The masked mean absolute error over observed targets,
+\begin{equation}
+\mathcal{L}=\frac{\sum_{b,h,i} m_{b,h,i}\,\lvert \hat x_{b,h,i}-x_{b,h,i}\rvert}{\sum_{b,h,i} m_{b,h,i}},
+\end{equation}
+so a sensor outage contributes nothing.
+
+%==================================================================================================
+\section{Models}
+\subsection{Rung 1: time-only GRU}
+One GRU~\cite{cho2014gru} with shared weights reads each sensor's 12-step sequence; its final state is joined with a learned 16-dimensional sensor embedding and passed through a ReLU projection to a vector $h_i\in\mathbb{R}^{d}$. A two-layer MLP maps $h_i$ to the 12 residuals at once. No sensor sees any other sensor: this is the deep-learning counterpart of the independent-segment models in the brief.
+
+\subsection{Rung 2: ST-GAT}
+ST-GAT keeps the GRU encoder and adds two graph-attention layers~\cite{velickovic2018gat} on top of $h_i$ (Fig.~\ref{fig:arch}). Each layer has two attention convolutions, one over upstream edges ($j\to i$) and one over downstream edges (the reversed graph), because traffic arrives from upstream while queues back up from downstream. For a receiver $i$ and neighbour $j$ with road weight $w_{ji}$ the attention weight is
+\begin{align}
+e_{ij}&=\mathrm{LeakyReLU}\big(\mathbf{a}^\top[\mathbf{W}h_i\,\Vert\,\mathbf{W}h_j\,\Vert\,\mathbf{W}_e w_{ji}]\big),\\
+\alpha_{ij}&=\frac{\exp(e_{ij})}{\sum_{k\in\mathcal{N}(i)\cup\{i\}}\exp(e_{ik})},
+\end{align}
+and the update is $h_i'=\mathrm{LayerNorm}\big(h_i+\mathrm{ELU}(\sum_j\alpha^{\uparrow}_{ij}\mathbf{W}h_j+\sum_j\alpha^{\downarrow}_{ij}\mathbf{W}h_j)\big)$~\cite{ba2016layernorm}, with 4 heads, $d=128$ and 2 layers, so information reaches neighbours of neighbours. Self-loops let a sensor ignore its neighbours. The output head sees both the graph state and the pre-graph GRU state. We use PyTorch~\cite{paszke2019pytorch} and the \texttt{GATConv} layer of PyTorch Geometric~\cite{fey2019pyg}.
+
+\textbf{No-edge twin.} The same class with \texttt{use\_graph=False}: every edge is removed but each sensor still attends to itself, so the twin has exactly the same 328k parameters and training recipe. Any difference between ST-GAT and its twin is caused by the edges alone.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[font=\scriptsize, node distance=3.5mm and 3mm,
+  box/.style={draw, rounded corners=2pt, align=center, minimum height=6.5mm, inner sep=2pt, fill=#1},
+  box/.default={gray!8}, >={Stealth[length=1.6mm]}]
+\node[box] (in) {Input\\$[B,12,N,6]$};
+\node[box=blue!8, right=of in] (gru) {Shared GRU\\+ sensor emb.};
+\node[box=green!10, right=of gru] (gat) {2$\times$ GAT layer\\up $\Vert$ down};
+\node[box=orange!12, right=of gat] (head) {MLP head\\12 residuals};
+\node[box, right=of head] (out) {$a_t+\hat r$\\$[B,12,N]$};
+\draw[->] (in) -- (gru); \draw[->] (gru) -- (gat); \draw[->] (gat) -- (head); \draw[->] (head) -- (out);
+\draw[->] (gru.south) -- ++(0,-3.2mm) -| node[pos=.25,below]{skip} (head.south);
+\node[below=6mm of gat, align=center, text width=5.6cm] (note) {No-edge twin: same blocks, edge set empty};
+\end{tikzpicture}
+\caption{ST-GAT. The GRU summarises each sensor's last hour; attention over upstream and downstream edges mixes neighbours; the head predicts 12 changes from the last observed speed.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Rung 3: DCRNN}
+DCRNN~\cite{li2018dcrnn} replaces every matrix product inside a GRU cell with a diffusion convolution on the directed graph. With forward and backward random-walk matrices $S_f=(D_O^{-1}A)^\top$ and $S_b=(D_I^{-1}A^\top)^\top$,
+\begin{equation}
+X\star_{\mathcal{G}}\Theta=\sum_{k=0}^{K}\big(S_f^{k}X\Theta_{f,k}+S_b^{k}X\Theta_{b,k}\big),\quad K=2.
+\end{equation}
+Two stacked DCGRU layers (64 units) form an encoder--decoder: the encoder reads 12 steps; the decoder emits 12 steps, feeding back its own previous prediction and the known calendar features of the target time. During training the true previous value is fed with a probability that decays linearly to zero over the first 40\% of epochs (teacher forcing~\cite{bengio2015scheduled}). We precompute all diffusion powers and apply them in one matrix product, which is numerically identical and about 30\% faster. This is our re-implementation, not the authors' code.
+
+%==================================================================================================
+\section{Experimental Setup}
+\textbf{Split.} Chronological and cut at midnight: 83 days for training, 12 for validation and 24 for testing (about 70/10/20\%, the usual METR-LA proportions, without splitting any day). A window belongs to the split that contains all its targets; its input may reach back into the previous split. This gives 23{,}881, 3{,}445 and 6{,}901 forecast origins. Memorial Day falls in validation. Windows are never shuffled across splits, and the scaler is fitted on training rows only; unit tests check both.
+
+\textbf{Training.} AdamW~\cite{loshchilov2019adamw} (weight decay $10^{-5}$), batch 64 (32 for DCRNN), gradient clipping at 5, learning rate halved after 3 epochs without validation improvement, at most 60 epochs with early stopping (patience 10) on validation MAE, and the best-epoch weights restored. The test set is used once, at the end.
+
+\textbf{Hyper-parameters.} For ST-GAT and its twin we searched learning rate $\{3\cdot10^{-4},10^{-3},3\cdot10^{-3}\}\times$ width $\{64,128\}$ on validation (25 epochs, seed 42; Table~\ref{tab:search}). The twin was searched separately so that the ablation is not decided by tuning. Both chose $10^{-3}$ and width 128; the GRU uses the same setting and DCRNN its default size.
+
+\textbf{Compute.} Training ran on one NVIDIA T4 on Kaggle, driven from the repository by a launcher that clones the exact commit and checks the data split and scaler. Search, DCRNN and the three-seed final runs took about 8~GPU hours (Table~\ref{tab:models}). Loading the DCRNN weights on a laptop CPU reproduces the GPU predictions to within 0.0002~mph.
+
+\textbf{Scoring.} All models are scored on the same 6{,}901 test windows. A target counts only if it was observed and every model produced a forecast for it (common mask; 88\% of target cells). Predictions are clipped to 0--70~mph. MAE and RMSE are in mph; MAPE is computed where the true speed is at least 1~mph. Peak means weekdays 07:00--10:00 and 15:00--19:00 at the target time, fixed before training. Uncertainty comes from three seeds (42, 1, 2) and a day-block bootstrap~\cite{kunsch1989} with 2{,}000 resamples of the 24 test days.
+
+\input{tables/tab_search.tex}
+\input{tables/tab_models.tex}
+
+%==================================================================================================
+\section{Results}
+\input{tables/tab_main.tex}
+
+\subsection{Overall accuracy}
+Table~\ref{tab:main} and Fig.~\ref{fig:horizon} give the test errors. At 5~minutes every learned model is within about 0.1~mph of the others: the last reading already says most of what there is to know. The models separate as the horizon grows. At 60~minutes ST-GAT reaches 3.46~mph MAE against 3.65 for XGBoost with neighbours, 3.69 for XGBoost and 5.35 for persistence. DCRNN is best at 5 and 15~minutes and close to ST-GAT at 30 (3.05 vs.\ 3.04). On RMSE, ST-GAT is best from 15~minutes on; on MAPE, ST-GAT and DCRNN are within 0.1 percentage points of each other at 15 and 30~minutes and ST-GAT is best at 60.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_horizon.pdf}
+\caption{Test MAE by horizon. Dashed: models without learned use of the graph.}
+\label{fig:horizon}
+\end{figure}
+
+\subsection{Is it the graph? The edge ablation}
+The no-edge twin is only slightly better than the plain GRU (1.6\% at 60~min), so an extra attention layer without edges adds little. Restoring the edges lowers MAE by 4.1, 5.1, 4.7 and 3.0\% at 5, 15, 30 and 60~minutes (Table~\ref{tab:boot}, Fig.~\ref{fig:ablation}); every bootstrap interval excludes zero. The gain is largest at 15--30~minutes, roughly the time congestion needs to travel one or two sensors. Over three seeds the standard deviation of test MAE is at most 0.014~mph (Table~\ref{tab:seeds}), about one tenth of the graph effect. On validation (Fig.~\ref{fig:curves}) every ST-GAT seed ends clearly below the twin and the GRU, whose curves end close together.
+
+\input{tables/tab_boot.tex}
+\input{tables/tab_seeds.tex}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_ablation.pdf}
+\caption{Left: MAE reduction from restoring the edges (ST-GAT vs.\ its no-edge twin). Right: ST-GAT vs.\ XGBoost with neighbour features. Whiskers: 95\% day-block bootstrap intervals.}
+\label{fig:ablation}
+\end{figure*}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_curves.pdf}
+\caption{Validation MAE per epoch; three seeds for GRU, no-edge twin and ST-GAT, one for DCRNN.}
+\label{fig:curves}
+\end{figure}
+
+\subsection{Against the Phase~1 baselines}
+ST-GAT beats XGBoost with neighbour features at every horizon: by 0.6\% at 5~minutes and 5.3\% at 60~minutes (95\% CI 4.3--6.2\%). DCRNN beats it by 4.3\% at 60~minutes. Tree models given neighbour speeds as fixed columns capture part of the spatial signal; models that learn how to combine neighbours capture more. ST-GAT and DCRNN are statistically tied up to 30~minutes; DCRNN is better at 5~minutes and ST-GAT at 60~minutes, where its interval only just excludes zero (1.0\%, CI 0.0--1.9).
+
+\subsection{Rush hour}
+23\% of scored targets fall in the peak. Errors there are 1.5 to 1.8 times the off-peak errors for every learned model (Table~\ref{tab:peak}), and the advantage of the graph model is largest: at 60~minutes ST-GAT is 8.6\% better than XGBoost with neighbours in the peak and 3.4\% off-peak.
+
+\input{tables/tab_peak.tex}
+
+\subsection{Where the graph helps}
+Per-sensor 60-minute MAE shows that ST-GAT beats its no-edge twin at 76\% of the 207 sensors and XGBoost with neighbours at 82\% (Fig.~\ref{fig:gain}). Where it loses, it loses little. The gain is nearly uncorrelated with the number of upstream neighbours ($r=0.10$), so it is not simply a matter of connectivity.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_gain_map.pdf}
+\caption{Per-sensor reduction of 60-minute MAE from the edges (ST-GAT minus its twin; blue: the graph helps). Grey lines: road-graph edges.}
+\label{fig:gain}
+\end{figure}
+
+\subsection{A congestion snapshot}
+Fig.~\ref{fig:snapshot} shows the slowest weekday-afternoon moment of the test period, chosen by a rule on observed speeds only (Friday 15 June 2012, 16:45), and three forecasts issued 60 minutes earlier. Persistence copies the map from an hour before. Every learned model improves on it (snapshot MAE 7.05~mph for persistence, 6.50 for XGBoost with neighbours, 6.32 for ST-GAT, 5.76 for DCRNN). A single moment illustrates failure modes; it does not rank models. At the most congested sensor no model anticipates sudden drops an hour ahead, but the learned models anticipate the recovery earlier than persistence.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_snapshot.pdf}
+\caption{Observed speeds at the slowest test-period moment and 60-minute-ahead forecasts of it. Grey dots: sensors offline.}
+\label{fig:snapshot}
+\end{figure*}
+
+\subsection{What the attention looks at}
+Averaged over 1{,}151 test windows, the first attention layer is far from uniform: some edges receive several times their equal share, others almost none, and a sensor keeps a median of only 15\% of upstream attention for itself. The learned weights are only loosely related to the fixed road-closeness weight (correlation 0.24). Attention describes where the model looks; it is not evidence of cause.
+
+\subsection{Comparison with published results}
+Table~\ref{tab:lit} places our numbers next to published ones. Our seasonal average (4.18~mph) matches the published historical average (4.16), and our DCRNN is about 0.1~mph below the paper's at each horizon. That gap most likely reflects different test days and masking rather than a better implementation; we do not claim to beat the published models.
+
+\input{tables/tab_lit.tex}
+
+%==================================================================================================
+\section{Discussion}
+Three findings answer the research question. First, a neural network by itself is not the gain: a time-only GRU ties XGBoost, and the no-edge twin is only slightly better. Second, the road graph is: the same network with edges removed is 3--5\% worse at every horizon, an effect ten times the seed spread and confirmed by day-block bootstrap. Third, the gain is largest where forecasting is hardest, at 15--60~minutes and in rush hour, which is what one expects if the model learns how congestion propagates along the network.
+
+The two graph models reach similar accuracy with different mechanisms. DCRNN fixes how information diffuses and learns only the mixing weights; ST-GAT learns per window which neighbours to listen to. DCRNN is slightly better at the shortest horizon and ST-GAT at the longest, but DCRNN takes about three times longer per epoch on a GPU because its 24 sequential recurrent steps launch many small operations.
+
+The brief also mentions an optional signal-control study. A separate SUMO simulation of one synthetic intersection is included in the repository; METR-LA contains no intersections, signal plans or vehicle counts, so the forecasts do not drive it, and nothing in this project controls real traffic.
+
+%==================================================================================================
+\section{Limitations}
+The study covers one city, 119 days in 2012 and speed only, so no claim extends beyond METR-LA. The Phase~1 XGBoost models were re-run so that every model is scored on identical points; the re-runs are 0.01--0.05~mph worse than the originally reported Phase~1 numbers, for a reason we have not traced. DCRNN was trained with one seed and its default size. The search was small and run for 25 epochs. Attention weights are descriptive only. Graph WaveNet, which learns an adaptive adjacency, was considered and not built within the time budget.
+
+%==================================================================================================
+\section{Conclusion}
+On METR-LA, letting each sensor learn from its upstream and downstream neighbours improves multi-horizon speed forecasts beyond strong independent-segment baselines: ST-GAT lowers 60-minute MAE by 5.3\% relative to XGBoost with neighbour features, and by 8.6\% in rush hour. A controlled ablation shows that the improvement comes from the road graph rather than from the neural architecture. Natural next steps are a learned adjacency, more seeds and cities, and coupling forecasts to a simulated controller.
+
+\section*{Reproducibility}
+Code, notebooks, training logs and the generator of every table and figure in this paper (\texttt{report/make\_report\_assets.py}) are on branch \texttt{phase2-deep-learning} of the project repository; the README gives every command.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

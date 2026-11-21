@@ -1,0 +1,14 @@
+\begin{table*}[t]
+\centering
+\caption{Seed stability: test MAE (mph), mean $\pm$ standard deviation over seeds 42, 1 and 2.}
+\label{tab:seeds}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+Model & 5 min & 15 min & 30 min & 60 min \\
+\midrule
+GRU (time only) & 2.316 $\pm$ 0.002 & 2.824 $\pm$ 0.001 & 3.216 $\pm$ 0.002 & 3.610 $\pm$ 0.014 \\
+ST-GAT, no edges & 2.311 $\pm$ 0.002 & 2.817 $\pm$ 0.009 & 3.201 $\pm$ 0.012 & 3.577 $\pm$ 0.010 \\
+ST-GAT & 2.223 $\pm$ 0.010 & 2.676 $\pm$ 0.010 & 3.053 $\pm$ 0.013 & 3.470 $\pm$ 0.012 \\
+\bottomrule
+\end{tabular}
+\end{table*}

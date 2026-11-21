@@ -1,0 +1,23 @@
+\begin{table}[t]
+\centering
+\caption{Published METR-LA test MAE (mph) as collected in~\cite{wu2019graphwavenet,zheng2020gman}, and ours. Splits, masks and test days differ, so this is a sanity check, not a ranking.}
+\label{tab:lit}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Model & 15 min & 30 min & 60 min \\
+\midrule
+Historical average & 4.16 & 4.16 & 4.16 \\
+FC-LSTM~\cite{sutskever2014} & 3.44 & 3.77 & 4.37 \\
+STGCN~\cite{yu2018stgcn} & 2.88 & 3.47 & 4.59 \\
+DCRNN~\cite{li2018dcrnn} & 2.77 & 3.15 & 3.60 \\
+Graph WaveNet~\cite{wu2019graphwavenet} & 2.69 & 3.07 & 3.53 \\
+GMAN~\cite{zheng2020gman} & 2.80 & 3.12 & 3.44 \\
+\midrule
+Ours: Seasonal avg. & 4.18 & 4.18 & 4.18 \\
+Ours: XGBoost + neigh. & 2.76 & 3.18 & 3.65 \\
+Ours: DCRNN & 2.67 & 3.05 & 3.49 \\
+Ours: ST-GAT & 2.67 & 3.04 & 3.46 \\
+\bottomrule
+\end{tabular}
+\end{table}
