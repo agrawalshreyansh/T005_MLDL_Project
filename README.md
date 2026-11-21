@@ -284,6 +284,8 @@ web fonts. 16 slides over an animated replay of a real test day.
 | N | show speaker notes |
 | F | fullscreen |
 
+**Presenting without knowing the project?** [`deep_learning/presentation/PRESENTER_GUIDE.md`](deep_learning/presentation/PRESENTER_GUIDE.md) explains the project in plain words, defines every term, gives a slide-by-slide script with timings, answers to likely questions, things not to say, and a 5-minute version.
+
 Every number on the slides was computed from the saved results. The generator scripts for the deck and
 the report were removed from this branch to keep it lean; they are in the git history (commit `7de505c`).
 
