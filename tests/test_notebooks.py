@@ -5,7 +5,8 @@ from pathlib import Path
 import nbformat
 import pytest
 
-NOTEBOOKS = sorted((Path(__file__).resolve().parents[1] / "notebooks").glob("*.ipynb"))
+_ROOT = Path(__file__).resolve().parents[1]
+NOTEBOOKS = sorted([*(_ROOT / "notebooks").glob("*.ipynb"), *(_ROOT / "deep_learning" / "notebooks").glob("*.ipynb")])
 NOTEBOOKS = [p for p in NOTEBOOKS if not p.name.startswith("_")]
 
 
