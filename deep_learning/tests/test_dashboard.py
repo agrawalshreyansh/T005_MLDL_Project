@@ -4,7 +4,7 @@ import pytest
 from deep_learning.dl import results
 from src import config
 
-PAGES = ["Network map", "Sensor explorer", "Leaderboard", "Graph lens", "Training", "About"]
+PAGES = ["Network map", "Replay", "Sensor explorer", "Leaderboard", "Graph lens", "Training", "About"]
 ready = config.TRAFFIC_CLEAN_NPZ.is_file() and bool(results.available())
 
 

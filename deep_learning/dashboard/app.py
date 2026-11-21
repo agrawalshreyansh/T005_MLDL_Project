@@ -74,7 +74,7 @@ test_ts = ctx.timestamps[scored.origins]
 
 st.sidebar.title("METR-LA forecasts")
 st.sidebar.caption("207 Los Angeles freeway sensors · test period 4–27 June 2012 · speeds in mph")
-page = st.sidebar.radio("View", ["Network map", "Sensor explorer", "Leaderboard", "Graph lens", "Training", "About"])
+page = st.sidebar.radio("View", ["Network map", "Replay", "Sensor explorer", "Leaderboard", "Graph lens", "Training", "About"])
 st.sidebar.markdown("---")
 st.sidebar.caption("Models loaded: " + ", ".join(results.label(k) for k in keys))
 
@@ -225,6 +225,67 @@ def training():
                                for s in summaries]).round(3), hide_index=True)
 
 
+def replay():
+    st.header("Replay a test day")
+    st.caption("Press Play: the left map shows measured speeds, the right map what the model forecast for that same moment, "
+               "issued earlier by the chosen horizon. Everything runs in your browser after one load.")
+    c1, c2, c3 = st.columns([2, 1, 1])
+    key = choose(c1.selectbox, "Model", {results.label(k): k for k in keys},
+                 keys.index("dl_st_gat_s42") if "dl_st_gat_s42" in keys else len(keys) - 1, key="rp_model")
+    h = choose(c2.selectbox, "Horizon", {f"{HZ_MIN[h]} min ahead": h for h in config.HORIZONS}, 2, key="rp_h")
+    step = choose(c3.selectbox, "Frame every", {"5 min": 1, "10 min": 2, "15 min": 3}, 1, key="rp_step")
+    j = config.HORIZONS.index(h)
+    target_ts = test_ts + pd.Timedelta(minutes=HZ_MIN[h])
+    days = sorted({t.date() for t in target_ts})
+    day = choose(st.select_slider, "Day", {d.strftime("%a %d %b"): d for d in days}, min(11, len(days) - 1), key="rp_day")
+    idx = np.flatnonzero(np.array([t.date() == day and 5 <= t.hour < 22 for t in target_ts]))[::step]   # 05:00-22:00
+
+    missing = -5.0                                     # grey for offline sensors
+    scale = [[0, "#6b6b6b"], [5 / 75, "#6b6b6b"], [5 / 75, "#be2828"], [35 / 75, "#e1781e"],
+             [55 / 75, "#ebc83c"], [1, "#28aa5a"]]
+
+    def frame_values(s):
+        ok = scored.valid[s, j]
+        act = np.where(ok, scored.y[s, j], missing)
+        fc = scored.preds[key][s, j]
+        mae = np.abs(fc - scored.y[s, j])[ok].mean() if ok.any() else np.nan
+        return act, fc, mae
+
+    def title(s, mae):
+        t = target_ts[s]
+        return (f"<b>{t:%H:%M}</b>  ·  {results.label(key)} forecast issued {t - pd.Timedelta(minutes=HZ_MIN[h]):%H:%M}"
+                f"  ·  network MAE {mae:.2f} mph")
+
+    def trace(values, subplot, show_scale):
+        return go.Scattermap(lat=lat, lon=lon, mode="markers", subplot=subplot, text=ctx.sensor_ids,
+                             hovertemplate="sensor %{text}<br>%{marker.color:.1f} mph<extra></extra>",
+                             marker=dict(size=9, color=values, colorscale=scale, cmin=missing, cmax=70,
+                                         showscale=show_scale, colorbar=dict(title="mph", x=1.0)))
+
+    act0, fc0, mae0 = frame_values(idx[0])
+    fig = go.Figure(data=[trace(act0, "map", False), trace(fc0, "map2", True)])
+    fig.frames = [go.Frame(name=str(i), data=[go.Scattermap(marker=dict(color=a)), go.Scattermap(marker=dict(color=f))],
+                           traces=[0, 1], layout=dict(title_text=title(s, m)))
+                  for i, s in enumerate(idx) for a, f, m in [frame_values(s)]]
+    view = dict(style="carto-darkmatter", center=dict(lat=float(lat.mean()), lon=float(lon.mean())), zoom=9.4)
+    play = dict(label="Play", method="animate", args=[None, dict(frame=dict(duration=350, redraw=True), fromcurrent=True, transition=dict(duration=0))])
+    pause = dict(label="Pause", method="animate", args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate")])
+    fig.update_layout(
+        height=620, margin=dict(l=0, r=0, t=50, b=0), title_text=title(idx[0], mae0),
+        showlegend=False, map=dict(domain=dict(x=[0, .49], y=[0, 1]), **view), map2=dict(domain=dict(x=[.51, 1], y=[0, 1]), **view),
+        annotations=[dict(text="measured", x=.01, y=.98, xref="paper", yref="paper", showarrow=False, font=dict(color="white", size=15)),
+                     dict(text="forecast", x=.52, y=.98, xref="paper", yref="paper", showarrow=False, font=dict(color="white", size=15))],
+        updatemenus=[dict(type="buttons", direction="left", x=0, y=-.02, xanchor="left", yanchor="top", buttons=[play, pause], active=-1,
+                          bgcolor="#2b6cb0", font=dict(color="white", size=14), bordercolor="#2b6cb0")],
+        sliders=[dict(x=.12, len=.88, y=-.02, currentvalue=dict(visible=False),
+                      steps=[dict(label=f"{target_ts[s]:%H:%M}", method="animate",
+                                  args=[[str(i)], dict(frame=dict(duration=0, redraw=True), mode="immediate")])
+                             for i, s in enumerate(idx)])])
+    st.plotly_chart(fig, width="stretch")
+    st.caption("Red = slow, green = free flow, grey = sensor offline (not scored). "
+               "Watch a rush hour: where the measured map turns red, the forecast map, made earlier, should already be red.")
+
+
 def about():
     st.header("About")
     st.markdown("""
@@ -246,5 +307,5 @@ is simulated only.
 """)
 
 
-{"Network map": network_map, "Sensor explorer": sensor_explorer, "Leaderboard": leaderboard_page,
+{"Network map": network_map, "Replay": replay, "Sensor explorer": sensor_explorer, "Leaderboard": leaderboard_page,
  "Graph lens": graph_lens, "Training": training, "About": about}[page]()
