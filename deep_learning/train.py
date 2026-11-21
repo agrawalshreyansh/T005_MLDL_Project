@@ -13,6 +13,7 @@ Test predictions are written for later scoring; this script never prints a test 
 from __future__ import annotations
 
 import argparse
+import itertools
 import time
 
 from src import config
@@ -34,8 +35,8 @@ def main() -> None:
     ap.add_argument("--models", nargs="+", choices=list(MODELS), required=True)
     ap.add_argument("--seeds", nargs="+", type=int, default=[config.SEED])
     ap.add_argument("--max-epochs", type=int)
-    ap.add_argument("--lr", type=float)
-    ap.add_argument("--width", type=int, help="d_model (GRU / ST-GAT) or hidden (DCRNN)")
+    ap.add_argument("--lr", type=float, nargs="+", default=[None], help="several values = grid search")
+    ap.add_argument("--width", type=int, nargs="+", default=[None], help="d_model (GRU / ST-GAT) or hidden (DCRNN)")
     ap.add_argument("--tag", default="", help="suffix for the run name, e.g. a search setting")
     ap.add_argument("--device")
     args = ap.parse_args()
@@ -46,30 +47,31 @@ def main() -> None:
     data = WindowData.from_context(ctx, device)
     print(f"device {device} | windows " + ", ".join(f"{k} {len(v)}" for k, v in data.origins.items()), flush=True)
 
-    for model_name in args.models:
-        for seed in args.seeds:
-            engine.set_seed(seed)
-            kwargs = {}
-            if args.width:
-                kwargs["hidden" if model_name == "dcrnn" else "d_model"] = args.width
-            model = build(model_name, adj, **kwargs)
-            params = {**MODELS[model_name][1], "seed": seed}
-            for key, value in (("max_epochs", args.max_epochs), ("lr", args.lr)):
-                if value is not None:
-                    params[key] = value
-            if config.IS_SMOKE:
-                params.setdefault("max_epochs", 2)
-            name = run_name(model_name, seed, args.tag)
-            t0 = time.time()
-            out = engine.train(model, data, params, out_dir=config.ARTIFACTS, name=config.tagged(name),
-                               log=lambda s: print(s, flush=True))
-            for split in ("val", "test"):
-                z = engine.predict_scaled(model, data, split)[:, [h - 1 for h in config.HORIZONS], :]
-                save_predictions(name, split, data.to_mph(z), ctx.origins[split], config.HORIZONS,
-                                 meta={"run": name, "model": model_name, "seed": seed, "kwargs": kwargs,
-                                       "best_epoch": out["best_epoch"], "best_val_mae_mph": out["best_val_mae_mph"]})
-            print(f"{name}: done in {(time.time() - t0) / 60:.1f} min, best val MAE {out['best_val_mae_mph']:.3f} mph "
-                  f"(epoch {out['best_epoch']})", flush=True)
+    grid = [(lr, w) for lr in args.lr for w in args.width]
+    for model_name, seed, (lr, width) in itertools.product(args.models, args.seeds, grid):
+        engine.set_seed(seed)
+        kwargs = {}
+        if width:
+            kwargs["hidden" if model_name == "dcrnn" else "d_model"] = width
+        model = build(model_name, adj, **kwargs)
+        params = {**MODELS[model_name][1], "seed": seed}
+        for key, value in (("max_epochs", args.max_epochs), ("lr", lr)):
+            if value is not None:
+                params[key] = value
+        if config.IS_SMOKE:
+            params.setdefault("max_epochs", 2)
+        search_tag = f"_lr{lr:g}_w{width}" if len(grid) > 1 else ""
+        name = run_name(model_name, seed, search_tag + args.tag)
+        t0 = time.time()
+        out = engine.train(model, data, params, out_dir=config.ARTIFACTS, name=config.tagged(name),
+                           log=lambda s: print(s, flush=True))
+        for split in ("val", "test"):
+            z = engine.predict_scaled(model, data, split)[:, [h - 1 for h in config.HORIZONS], :]
+            save_predictions(name, split, data.to_mph(z), ctx.origins[split], config.HORIZONS,
+                             meta={"run": name, "model": model_name, "seed": seed, "kwargs": kwargs,
+                                   "best_epoch": out["best_epoch"], "best_val_mae_mph": out["best_val_mae_mph"]})
+        print(f"{name}: done in {(time.time() - t0) / 60:.1f} min, best val MAE {out['best_val_mae_mph']:.3f} mph "
+              f"(epoch {out['best_epoch']})", flush=True)
 
 
 if __name__ == "__main__":

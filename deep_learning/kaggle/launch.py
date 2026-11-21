@@ -33,8 +33,8 @@ def sh(cmd, **kw):
     subprocess.run(cmd, shell=True, check=True, **kw)
 
 sh("nvidia-smi --query-gpu=name,memory.total --format=csv || true")
-sh("git clone -q {repo} repo")
-os.chdir("repo")
+sh("git clone -q {repo} /kaggle/temp/repo")   # outside /kaggle/working, so it is not part of the output
+os.chdir("/kaggle/temp/repo")
 sh("git checkout -q {commit}")
 sh(sys.executable + " -m pip install -q torch_geometric h5py")
 env = dict(os.environ, **{env})
