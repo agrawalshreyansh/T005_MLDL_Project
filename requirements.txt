@@ -1,22 +1,14 @@
 # Core numerical stack
-numpy>=2.0
+numpy>=2.0,<2.3
 pandas>=2.2
-scipy>=1.13
-scikit-learn>=1.5
+scipy>=1.13           # graph construction (src/graph_utils.py)
 h5py>=3.10            # reads metr-la.h5 without unpickling
 
-# Models
-# Phase 1 needs only xgboost and scikit-learn; torch / torch_geometric are for Phase 2 (notebooks 06, 06b)
-torch>=2.4            # CPU / CUDA / Apple-MPS
-torch_geometric>=2.5  # only used to verify the dense GAT layer against GATConv (tests)
+# Comparison baselines (notebooks 04, 05, 05b)
 xgboost>=2.1          # macOS: `brew install libomp` (OpenMP runtime) if import fails
 
-# Graph and visualisation
-networkx>=3.2
+# Plots
 matplotlib>=3.8
-seaborn>=0.13
-plotly>=5.22
-folium>=0.17
 
 # Notebook / test tooling
 jupyter
@@ -25,8 +17,6 @@ nbformat
 nbclient
 nbconvert
 pytest
-tqdm
-pyyaml
 
 # Optional: SUMO traffic simulation for notebook 09 (simulation only)
 eclipse-sumo

@@ -278,7 +278,7 @@ def load_graph_artifacts(expected_sensor_ids: list[str] | None = None) -> GraphA
     """Load the validated graph; optionally assert it matches a traffic sensor order."""
     for p in (config.ADJACENCY_NPY, config.SENSOR_ORDER_CSV, config.GRAPH_META_JSON):
         if not Path(p).is_file():
-            raise FileNotFoundError(f"{p} not found - run notebook 03_graph_construction first.")
+            raise FileNotFoundError(f"{p} not found - run `python -m deep_learning.prepare_data` first.")
     adj = np.load(config.ADJACENCY_NPY)
     dist = np.load(config.DISTANCE_MATRIX_NPY) if config.DISTANCE_MATRIX_NPY.is_file() else np.empty((0, 0))
     locations = pd.read_csv(config.SENSOR_ORDER_CSV, dtype={"sensor_id": str})

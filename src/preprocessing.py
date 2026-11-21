@@ -53,7 +53,7 @@ class SplitBoundaries:
     @classmethod
     def from_json(cls, path: Path = config.SPLITS_JSON) -> "SplitBoundaries":
         if not Path(path).is_file():
-            raise FileNotFoundError(f"{path} not found - run notebook 02_data_preprocessing first.")
+            raise FileNotFoundError(f"{path} not found - run `python -m deep_learning.prepare_data` first.")
         d = json.loads(Path(path).read_text())
         return cls(d["n_total"], tuple(d["train"]), tuple(d["val"]), tuple(d["test"]),
                    d["first_timestamp"], d["last_timestamp"])
@@ -138,7 +138,7 @@ class SpeedScaler:
     @classmethod
     def from_json(cls, path: Path = config.SCALER_JSON) -> "SpeedScaler":
         if not Path(path).is_file():
-            raise FileNotFoundError(f"{path} not found - run notebook 02_data_preprocessing first.")
+            raise FileNotFoundError(f"{path} not found - run `python -m deep_learning.prepare_data` first.")
         d = json.loads(Path(path).read_text())
         return cls(d["mean"], d["std"], np.asarray(d["sensor_mean"], dtype=np.float32), tuple(d["fit_range"]))
 

@@ -99,7 +99,7 @@ The commits on this branch follow these steps in order, so `git log` doubles as 
 
 | # | Step | What it means here | Where |
 |---|---|---|---|
-| 1 | Frame the question and the number to beat | Phase 1's XGBoost and XGBoost + neighbour features set the bar per horizon | `reports/phase1_results_summary.md` |
+| 1 | Frame the question and the number to beat | Persistence, seasonal average, XGBoost and XGBoost + neighbour features set the bar per horizon | `notebooks/04`, `05`, `05b` |
 | 2 | Freeze the data contract | Same split, scaler and sensor order on every machine; checked, not trusted | `prepare_data.py` |
 | 3 | Turn data into tensors | Windows `[batch, 12 steps, 207 sensors, 6 features]`, targets `[batch, 12, 207]`, plus a mask | `dl/data.py` |
 | 4 | Prove there is no leakage | Tests that no input or target crosses a split boundary | `tests/` |

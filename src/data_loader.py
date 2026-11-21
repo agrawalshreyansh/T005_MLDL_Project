@@ -200,7 +200,7 @@ def save_clean_traffic(data: CleanTraffic, path: Path = config.TRAFFIC_CLEAN_NPZ
 
 def load_clean_traffic(path: Path = config.TRAFFIC_CLEAN_NPZ) -> CleanTraffic:
     if not Path(path).is_file():
-        raise FileNotFoundError(f"{path} not found - run notebook 02_data_preprocessing first.")
+        raise FileNotFoundError(f"{path} not found - run `python -m deep_learning.prepare_data` first.")
     with np.load(path, allow_pickle=False) as z:
         return CleanTraffic(
             speed=z["speed"],
