@@ -24,6 +24,7 @@ artifacts/metrics/*
 !artifacts/metrics/dl_*_history.csv
 !artifacts/metrics/dl_*_summary.json
 !artifacts/metrics/dl_st_gat_attention.npz
+!artifacts/metrics/dl_sensor_gain_60min.csv
 artifacts/metrics/*_smoke_*
 
 # SUMO outputs
