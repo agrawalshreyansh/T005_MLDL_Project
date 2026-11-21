@@ -1,7 +1,7 @@
 # Simulated signal-control experiment (optional)
 
 > **Status: executed** with SUMO 1.28 (`pip install eclipse-sumo traci`) in notebook 09: 20 seeds x 2 policies, paired comparison; results in
-> `artifacts/metrics/sumo_signal_control_*.csv` and summarised in `reports/results_summary.md`. Every simulation step checks that SUMO displays the controller's signal state.
+> `artifacts/metrics/sumo_signal_control_*.csv` (written when the notebook runs). Every simulation step checks that SUMO displays the controller's signal state.
 > This is a *simulation only*: the project never connects to real traffic signals, detectors or live feeds.
 
 ## Why METR-LA cannot drive this directly
