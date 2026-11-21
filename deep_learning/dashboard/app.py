@@ -83,7 +83,8 @@ st.sidebar.caption("Models loaded: " + ", ".join(results.label(k) for k in keys)
 def network_map():
     st.header("Network map")
     c1, c2, c3 = st.columns([2, 1, 1])
-    key = choose(c1.selectbox, "Model", {results.label(k): k for k in keys}, len(keys) - 1)
+    key = choose(c1.selectbox, "Model", {results.label(k): k for k in keys},
+                 keys.index("dl_st_gat_s42") if "dl_st_gat_s42" in keys else len(keys) - 1)
     h = choose(c2.selectbox, "Horizon", {f"{HZ_MIN[h]} min ahead": h for h in config.HORIZONS}, 3)
     view = c3.radio("Colour by", ["forecast", "actual", "error"], horizontal=True)
     j = config.HORIZONS.index(h)

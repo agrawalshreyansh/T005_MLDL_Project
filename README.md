@@ -263,7 +263,7 @@ needs steps 1–7 of section 5 on this machine. Pages (sidebar):
 | **Training** | learning curves and run summaries |
 | **About** | question, data, models, scoring, limits |
 
-For a live demo: Replay → Play, then Network map at 17:30 on a weekday in error view, then Graph lens.
+For a live demo follow the 5-minute script in [`deep_learning/dashboard/PRESENTER_GUIDE.md`](deep_learning/dashboard/PRESENTER_GUIDE.md): what to click, what to say, numbers to remember and likely questions.
 
 ---
 
