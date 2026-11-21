@@ -1,0 +1,20 @@
+{
+  "name": "dl_gru_s1",
+  "best_epoch": 29,
+  "best_val_mae_mph": 2.9772497640328854,
+  "epochs_run": 39,
+  "parameters": 157948,
+  "params": {
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "batch_size": 64,
+    "max_epochs": 60,
+    "patience": 10,
+    "grad_clip": 5.0,
+    "lr_patience": 3,
+    "eval_batch_size": 128,
+    "tf_decay_frac": 0.4,
+    "seed": 1
+  },
+  "device": "cuda:0"
+}
