@@ -20,6 +20,10 @@ artifacts/predictions/*
 artifacts/figures/*
 artifacts/metrics/*
 !artifacts/*/.gitkeep
+# deep-learning training curves are small and feed the dashboard
+!artifacts/metrics/dl_*_history.csv
+!artifacts/metrics/dl_*_summary.json
+artifacts/metrics/*_smoke_*
 
 # SUMO outputs
 phase2/simulation/output/
