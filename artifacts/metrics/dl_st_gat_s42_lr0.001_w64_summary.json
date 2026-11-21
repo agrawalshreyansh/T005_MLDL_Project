@@ -1,0 +1,20 @@
+{
+  "name": "dl_st_gat_s42_lr0.001_w64",
+  "best_epoch": 22,
+  "best_val_mae_mph": 2.830991533868506,
+  "epochs_run": 25,
+  "parameters": 87932,
+  "params": {
+    "lr": 0.001,
+    "weight_decay": 1e-05,
+    "batch_size": 64,
+    "max_epochs": 25,
+    "patience": 10,
+    "grad_clip": 5.0,
+    "lr_patience": 3,
+    "eval_batch_size": 128,
+    "tf_decay_frac": 0.4,
+    "seed": 42
+  },
+  "device": "cuda:0"
+}
