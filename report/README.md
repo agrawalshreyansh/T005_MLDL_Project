@@ -20,7 +20,7 @@ Before submitting: fill in the author block (`\author{...}` is a placeholder), a
 ## Regenerating the numbers
 
 ```bash
-python -m pytest tests -q --ignore=tests/test_gat_model.py --ignore=tests/test_dcrnn_model.py
+python -m pytest tests -q
 # run notebooks 01-05e and 07a (see the root README), then:
 python report/make_tables.py
 ```

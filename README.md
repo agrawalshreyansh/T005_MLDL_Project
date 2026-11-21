@@ -7,6 +7,8 @@ It asks whether using the road graph helps forecasting compared with models that
 > [`reports/results_summary.md`](reports/results_summary.md). Anything that was not run is labelled as such there.
 > Signal control is **simulated only**; nothing in this project talks to real traffic infrastructure or live feeds.
 
+> **Branch `phase2-deep-learning`: the deep-learning phase is being rebuilt in [`deep_learning/`](deep_learning/).** The earlier graph-model notebooks (06, 06b, 08), their modules (`src/gat_model.py`, `src/dcrnn_model.py`), the all-model evaluation notebook 07 and `reports/results_summary.md` were removed on this branch and are superseded by the new package. Phase 1 (notebooks 00-05e, 07a) and the SUMO simulation in `phase2/simulation/` are unchanged.
+
 ## State of the delivered run
 
 * **Executed in full mode:** notebooks 00-09 including 05b (XGBoost with neighbour features), 06b (optional DCRNN-style comparison) and 09 (optional SUMO simulation, SUMO 1.28 installed with pip) with real data. All unit/structure tests pass (`python -m pytest tests -q`).
