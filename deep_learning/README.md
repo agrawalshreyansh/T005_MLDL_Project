@@ -18,7 +18,7 @@ deep_learning/
 ├── kaggle/              push training runs to a Kaggle GPU and fetch the results
 ├── notebooks/           10-15: the step-by-step story
 ├── dashboard/app.py     streamlit run deep_learning/dashboard/app.py
-├── presentation/        self-contained HTML deck
+├── presentation/        index.html deck + presentation.pdf
 └── tests/               shapes, leakage, masks, tiny-overfit checks
 ```
 
@@ -66,8 +66,7 @@ python -m deep_learning.kaggle.launch push --slug metr-dl-dcrnn  --models dcrnn
 python -m deep_learning.kaggle.launch push --slug metr-dl-final  --models gru st_gat st_gat_noedge --seeds 42 1 2 -- --lr 0.001 --width 128
 python -m deep_learning.kaggle.launch fetch --slug <slug>       # copies models, predictions, histories into artifacts/
 
-# 3. notebooks 10-15 in order, then the deck
-python -m deep_learning.presentation.build                     # writes presentation/index.html
+# 3. notebooks 10-15 in order
 streamlit run deep_learning/dashboard/app.py
 ```
 
