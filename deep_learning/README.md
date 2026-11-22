@@ -25,7 +25,7 @@ deep_learning/
 ## Result in one table
 
 Test MAE in mph on the last 24 days (6,901 windows, common mask; DL = seed 42). Full tables, seeds,
-peak/off-peak and bootstrap intervals: [`reports/dl_results_summary.md`](../reports/dl_results_summary.md).
+peak/off-peak and bootstrap intervals: notebook 14 and [`report/main.pdf`](../report/main.pdf).
 
 | Model | 5 min | 15 min | 30 min | 60 min |
 |---|---|---|---|---|
