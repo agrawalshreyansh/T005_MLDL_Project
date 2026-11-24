@@ -151,7 +151,7 @@ On a fresh clone the full order is:
 | 5. XGBoost + neighbours | run `notebooks/05b_xgboost_spatial` (trains when no saved model exists) | ~18 min |
 | 6. Train DL models | Kaggle (section 6) | ~8 h of T4 GPU in total |
 | 7. DL notebooks | run `deep_learning/notebooks/10` … `15` in order | ~5 min in total |
-| 8. Dashboard | `streamlit run deep_learning/dashboard/app.py` | opens in a few seconds |
+| 8. Dashboard | `.venv/bin/python -m streamlit run deep_learning/dashboard/app.py` | opens in a few seconds |
 
 Run a notebook headless:
 
@@ -246,7 +246,7 @@ Every DL notebook ends with "Common mistakes" and "Check yourself" questions for
 ## 8. Dashboard
 
 ```bash
-streamlit run deep_learning/dashboard/app.py
+.venv/bin/python -m streamlit run deep_learning/dashboard/app.py
 ```
 
 Opens at **http://localhost:8501**. It reads only saved files (predictions, histories, attention), so it
@@ -398,6 +398,7 @@ The visual plan with the full reasoning was approved before any code was written
 | notebook 14, dashboard or deck says predictions are missing | run notebooks 04, 05, 05b and fetch/train the DL runs |
 | Kaggle job stays `QUEUED` | another GPU job is running; Kaggle allows one at a time |
 | Kaggle `push` refuses | push the current commit to GitHub first |
-| dashboard port in use | `streamlit run deep_learning/dashboard/app.py --server.port 8502` |
+| dashboard shows `ModuleNotFoundError: plotly` or a blank error page | it was started with a global `streamlit` (e.g. pyenv Python 3.9); stop it and run `.venv/bin/python -m streamlit run deep_learning/dashboard/app.py` |
+| dashboard port in use | `.venv/bin/python -m streamlit run deep_learning/dashboard/app.py --server.port 8502` |
 | SUMO not found | `pip install eclipse-sumo traci` and set `SUMO_HOME` as in section 10 |
 | DCRNN very slow locally | expected (~8 min per epoch on an M3); use Kaggle |

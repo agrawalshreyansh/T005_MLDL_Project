@@ -5,7 +5,7 @@
 ```bash
 cd ~/Desktop/DL/Project/T005_MLDL_Project
 source .venv/bin/activate
-streamlit run deep_learning/dashboard/app.py
+.venv/bin/python -m streamlit run deep_learning/dashboard/app.py
 ```
 
 * Opens at **http://localhost:8501**. Wait until the sidebar lists the loaded models (~10 s on first load).
@@ -54,6 +54,7 @@ streamlit run deep_learning/dashboard/app.py
 | Problem | Fix |
 |---|---|
 | Error about missing prediction files | run on the laptop that has `artifacts/predictions/` (not in git) |
-| Port 8501 busy | `streamlit run deep_learning/dashboard/app.py --server.port 8502` |
+| Error page / `No module named 'plotly'` | you started a global `streamlit`, not the project one. Press Ctrl+C there and use the command at the top of this guide |
+| Port 8501 busy | `.venv/bin/python -m streamlit run deep_learning/dashboard/app.py --server.port 8502` |
 | Maps blank (no internet) | map tiles need internet; dots and colours still work. Fall back to `deep_learning/presentation/presentation.pdf` |
 | Replay slow | set **Frame every** to 15 min |

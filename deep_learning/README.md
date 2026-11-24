@@ -17,7 +17,7 @@ deep_learning/
 ├── train.py             training runs: python -m deep_learning.train --models st_gat --seeds 42 --lr 0.001 --width 128
 ├── kaggle/              push training runs to a Kaggle GPU and fetch the results
 ├── notebooks/           10-15: the step-by-step story
-├── dashboard/app.py     streamlit run deep_learning/dashboard/app.py
+├── dashboard/app.py     .venv/bin/python -m streamlit run deep_learning/dashboard/app.py
 ├── presentation/        index.html deck + presentation.pdf
 └── tests/               shapes, leakage, masks, tiny-overfit checks
 ```
@@ -67,7 +67,7 @@ python -m deep_learning.kaggle.launch push --slug metr-dl-final  --models gru st
 python -m deep_learning.kaggle.launch fetch --slug <slug>       # copies models, predictions, histories into artifacts/
 
 # 3. notebooks 10-15 in order
-streamlit run deep_learning/dashboard/app.py
+.venv/bin/python -m streamlit run deep_learning/dashboard/app.py
 ```
 
 Kaggle allows one GPU session at a time, so the jobs queue. Measured on the T4: ST-GAT ~56 s per epoch,
